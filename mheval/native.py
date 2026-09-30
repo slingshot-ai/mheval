@@ -92,7 +92,7 @@ class Chat:
                         self._log(f"endpoint rejected `{param}`; using the API default")
                     continue
                 attempt += 1
-                if e.code not in (408, 409, 429, 500, 502, 503, 504, 529) or attempt == retries:
+                if not (e.code in (408, 409, 429) or e.code >= 500) or attempt == retries:  # any 5xx is transient
                     raise RuntimeError(f"{self.model}: HTTP {e.code} {body[:500]!r}") from e
                 self._log(f"HTTP {e.code}, retry {attempt}/{retries}")
             except (urllib.error.URLError, TimeoutError, KeyError, json.JSONDecodeError, ProviderError) as e:
