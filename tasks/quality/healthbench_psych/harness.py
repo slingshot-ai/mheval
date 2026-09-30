@@ -11,6 +11,7 @@ Per-tag scores follow simple-evals' HealthBenchEval (example tags = theme, rubri
 import argparse
 import json
 import os
+import time
 from collections import defaultdict
 
 from mheval.native import import_original, pmap, write_results
@@ -36,22 +37,28 @@ def main():
     rows = [examples[p] for p in sorted(examples)][: a.limit]
 
     class Sampler(OpenAICompatSampler):
-        """If the endpoint rejects temperature/max_tokens (reasoning models outside REGISTRY), switch to the
-        settings REGISTRY uses for such models: temperature=None, token_param="max_completion_tokens"."""
+        """The repo's sampler, made robust to two endpoint behaviors: rejected temperature/max_tokens for
+        reasoning models outside REGISTRY (switch to REGISTRY's settings for such models: temperature=None,
+        token_param="max_completion_tokens"), and 200 responses without `choices` (retried with backoff)."""
 
         def _raw(self, x, tries=3):
-            try:
-                return super()._raw(x)
-            except RuntimeError as e:  # idempotent: the sampler is shared across worker threads
-                if not tries or "HTTP 400" not in str(e):
-                    raise
-                if "temperature" in str(e):
-                    self._temp = None
-                elif "max_tokens" in str(e):
-                    self._token_param = "max_completion_tokens"
-                else:
-                    raise
-                return self._raw(x, tries - 1)
+            for attempt in range(6):
+                try:
+                    response = super()._raw(x)
+                except RuntimeError as e:  # idempotent: the sampler is shared across worker threads
+                    if not tries or "HTTP 400" not in str(e):
+                        raise
+                    if "temperature" in str(e):
+                        self._temp = None
+                    elif "max_tokens" in str(e):
+                        self._token_param = "max_completion_tokens"
+                    else:
+                        raise
+                    return self._raw(x, tries - 1)
+                if response.get("choices"):
+                    return response
+                time.sleep(min(2 ** attempt, 30))
+            raise RuntimeError(f"no choices in response: {str(response)[:200]}")
 
     def sampler(role):
         """Our endpoint, with the repo's own per-model settings when the model is in its REGISTRY; else the

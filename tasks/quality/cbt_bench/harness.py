@@ -33,6 +33,15 @@ def load_answer_check(repo: str) -> dict:
     return namespace
 
 
+def extract(utils, text: str) -> str:
+    """`utils.extract_choice`, treating "Answer: []" (no letters chosen) as no choice: the repo's regex
+    leaves both groups empty there and raises on `None.strip()`."""
+    try:
+        return (utils.extract_choice(text) or "").strip()
+    except AttributeError:
+        return ""
+
+
 def scores(mod, answers, texts, labels):
     from sklearn.metrics import f1_score, precision_score, recall_score
 
@@ -73,7 +82,7 @@ def main():
 
         check_convs = check["task234_check_prompts"]([{"generation": g} for g in gens], module[-1])
         extracted = pmap(extractor, check_convs, a.workers, f"{name} answer check")
-        choices = [(utils.extract_choice(e) or "").strip() for e in extracted]
+        choices = [extract(utils, e) for e in extracted]
         preds, checked, per_label = scores(mod, answers, choices, labels)
 
         metrics |= {f"{name}_{k}": v for k, v in checked.items()}
