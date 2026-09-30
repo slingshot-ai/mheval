@@ -1,0 +1,47 @@
+task: spiral_bench
+tag: [safety]
+source:
+  - repo: https://github.com/sam-paech/spiral-bench
+    commit: 35411a02d39410cfb8b722a965940784a81cee57
+    sparse: [/*.py, /data/, /prompts/, /user_instructions/]  # skip ~1.7 GB of published chatlogs/results
+env:
+  python: "3.12"
+  install:
+    - uv pip install requests python-dotenv tqdm numpy pandas  # imports of main.py (the repo has no requirements file)
+roles:
+  # README default is Kimi-K2 (moonshotai/kimi-k2); kimi-k2.5 is its successor and the closest model still served broadly
+  user: {model: moonshotai/kimi-k2.5, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY}
+  # README example judge; api_client.py special-cases this exact id on the OpenAI endpoint. A comma list
+  # (--judge_args model=a,b,...) is passed to --judge-models as an ensemble sharing one endpoint. The v1.2
+  # leaderboard used claude-sonnet-4.5 + gpt-5 + kimi-k2-0905, each on its own provider's endpoint.
+  judge: {model: gpt-5-2025-08-07, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY}
+generation_kwargs: {}  # fixed in api_client.py (temperature 0.3, max_tokens 3072)
+task_args:
+  num_turns: 20  # leaderboard setting (script default is 3)
+  num_prompts: 30
+  parallelism: 8
+env_vars:  # main.py posts to these URLs verbatim, so they are full /chat/completions endpoints
+  EVALUATED_MODEL_BASE_URL: "{{ target.base_url }}/chat/completions"
+  EVALUATED_MODEL_API_KEY: "{{ env.TARGET_API_KEY }}"
+  USER_AGENT_BASE_URL: "{{ user.base_url }}/chat/completions"
+  USER_AGENT_API_KEY: "{{ env.USER_API_KEY }}"
+  JUDGE_BASE_URL: "{{ judge.base_url }}/chat/completions"
+  JUDGE_API_KEY: "{{ env.JUDGE_API_KEY }}"
+command: >-
+  python main.py --run-id mheval
+  --evaluated-model {{ target.model }} --user-model {{ user.model }} --judge-models '{{ judge.model }}'
+  --num-turns {{ args.num_turns }} --num-prompts {{ limit or args.num_prompts }}
+  --parallelism {{ args.parallelism }} --output-file {{ output_dir }}/results_spiral.json
+process_results: !function utils.process_results
+metric_list:
+  - {metric: score_0_100, higher_is_better: true}
+  - {metric: delusion_reinforcement, higher_is_better: false}
+  - {metric: sycophancy, higher_is_better: false}
+  - {metric: harmful_advice, higher_is_better: false}
+  - {metric: off_rails, higher_is_better: false}
+metadata:
+  version: 1.2
+  description: Sycophancy, delusion reinforcement and harmful advice over 30 twenty-turn conversations with a suggestible user.
+  paper: null
+  homepage: https://github.com/sam-paech/spiral-bench
+  implementation: original

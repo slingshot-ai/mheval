@@ -1,0 +1,31 @@
+task: cbt_bench
+tag: [quality]
+source:
+  - repo: https://github.com/mianzhang/CBT-Bench
+    commit: 0fb262c7f5c51b8641be43408c63a5fa3622c90f
+env:
+  python: "3.12"
+  install:
+    - uv pip install scikit-learn tqdm openai
+roles:  # answer re-extraction model of gpt_check.py (utils.openai_azure_inference defaults)
+  judge: {model: gpt-4o, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY, temperature: 0.7}
+generation_kwargs: {temperature: 0.0, max_tokens: 2048}  # paper §5.1: temperature 0.0 for Levels I-II; repo max_tokens
+task_args:
+  shot: 0
+  workers: 16
+env_vars: {}
+command: >-
+  python {{ task_dir }}/harness.py --repo . --shot {{ args.shot }} --workers {{ args.workers }}
+  {% if limit %}--limit {{ limit }}{% endif %}
+process_results: null  # harness.py writes results.json
+metric_list:
+  - {metric: mean_weighted_f1, higher_is_better: true}
+  - {metric: distortions_weighted_f1, higher_is_better: true}
+  - {metric: core_major_weighted_f1, higher_is_better: true}
+  - {metric: core_fine_weighted_f1, higher_is_better: true}
+metadata:
+  version: 1.0
+  description: CBT Level II — cognitive distortion, primary and fine-grained core belief classification (weighted F1).
+  paper: https://arxiv.org/abs/2410.13218
+  homepage: https://github.com/mianzhang/CBT-Bench
+  implementation: original + adapter

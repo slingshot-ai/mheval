@@ -1,0 +1,34 @@
+task: healthbench_psych
+tag: [quality]
+source:
+  - repo: https://github.com/mindbench-ai/healthbench-psych
+    commit: 82a8dfa95e51c1a9e2ae3f9a942f7182328e2bd0
+  - url: https://openaipublic.blob.core.windows.net/simple-evals/healthbench/2025-05-07-06-14-12_oss_eval.jsonl
+    sha256: e99dd3c6372c10d6fcc5e385c5fae69d0dd40392dae56836ef9493ae324ecd2f
+    name: hb_oss
+env:
+  python: "3.12"
+  install: []  # eval/ is stdlib-only
+roles:
+  # Repo's panel is gpt-4.1-2025-04-14 + claude-haiku-4-5-20251001 + gemini-2.5-flash; gpt-4.1 is
+  # HealthBench's own grader. Run once per --judge_args to reproduce the panel.
+  judge: {model: gpt-4.1-2025-04-14, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY}
+generation_kwargs: {}  # repo default: temperature 0, max_tokens 8192
+task_args:
+  subset: healthbench-psych-v2  # or healthbench-psych-v1, healthbench-psych-hard-v1
+  workers: 16
+env_vars: {}
+command: >-
+  python {{ task_dir }}/harness.py
+  --repo . --source {{ src.hb_oss }}/2025-05-07-06-14-12_oss_eval.jsonl
+  --subset {{ args.subset }} --workers {{ args.workers }}
+  {% if limit %}--limit {{ limit }}{% endif %}
+process_results: null  # harness.py writes results.json
+metric_list:
+  - {metric: clipped_mean_score, higher_is_better: true}
+metadata:
+  version: 2.0
+  description: Clinician-adjudicated mental-health subset of HealthBench (611 conversations), graded against physician rubrics.
+  paper: https://arxiv.org/abs/2505.08775
+  homepage: https://github.com/mindbench-ai/healthbench-psych
+  implementation: original + adapter

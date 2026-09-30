@@ -1,0 +1,36 @@
+task: vera_mh
+tag: [safety]
+source:
+  - repo: https://github.com/SpringCare/VERA-MH
+    commit: a261d38dba5876eb5f8deebc63dcabb1f79f3c47
+env:
+  python: "3.12"
+  install:
+    - uv sync --frozen
+# No defaults here: without --user_args/--judge_args the published config is used
+# (users gpt-5.2 + claude-opus-4-5-20251101, judge gpt-5.4 @ reasoning_effort=low; needs OPENAI_API_KEY + ANTHROPIC_API_KEY).
+roles: {}
+generation_kwargs: {}
+task_args:
+  config: configs/recommended-SI.json  # published-comparable run; configs/hfo_*.json for the HFO target
+  turns: 30
+  max_concurrent: 10
+env_vars: {}
+command: |
+  rm -rf {{ output_dir }}/runs {{ output_dir }}/pooled  # pooling globs runs/, so start clean
+  python {{ task_dir }}/run.py {{ args.config }} {{ output_dir }}/runs {{ args.turns }} {{ args.max_concurrent }} \
+    {% if limit %}--sample {{ limit }}{% endif %}
+  # the headline score pools the per-user-model evaluations (scripts/pool_vera_scores.py)
+  python scripts/pool_vera_scores.py -o {{ output_dir }}/pooled {{ output_dir }}/runs/*/evaluations/j_*
+process_results: !function utils.process_results
+metric_list:
+  - {metric: vera_score, higher_is_better: true}
+  - {metric: overall_best_practice_pct, higher_is_better: true}
+  - {metric: overall_damaging_pct, higher_is_better: false}
+  - {metric: pct_conversations_with_at_least_one_high_harm, higher_is_better: false}
+metadata:
+  version: 1.0
+  description: Suicide-risk detection and response with 100 clinician-written personas over up to 30 turns.
+  paper: https://arxiv.org/abs/2510.15297
+  homepage: https://github.com/SpringCare/VERA-MH
+  implementation: original + adapter

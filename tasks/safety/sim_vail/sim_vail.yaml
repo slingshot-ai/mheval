@@ -1,0 +1,47 @@
+task: sim_vail
+tag: [safety]
+source:
+  # SIM-VAIL ships no runner: its README regenerates transcripts with Petri + the repo's override bundle.
+  # Petri pinned to the last commit before the v1 runs (Nov 2025); upstream has since been rewritten.
+  - repo: https://github.com/safety-research/petri
+    commit: dc9fba3eec53cd24662ddbf25931003e42569a94
+  - repo: https://github.com/veithweilnhammer/sim-vail
+    commit: 988fdc16283fe40389b7b06d9f3ad9d4dd4d4849
+    sparse: [/repro/]  # skip ~1 GB of released transcripts
+env:
+  python: "3.12"
+  install:
+    - cp -r ../sim-vail/repro/petri_overrides/src/petri/. src/petri/
+    - uv sync --frozen
+roles:  # v1 transcripts: auditor claude-sonnet-4.5, judge claude-opus-4.5 (both via OpenRouter)
+  user: {model: anthropic/claude-sonnet-4.5, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY}
+  judge: {model: anthropic/claude-opus-4.5, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY}
+generation_kwargs: {}
+task_args:
+  max_turns: 10  # tasks/petri.py default
+  epochs: 3      # 3 runs per instruction (90 transcripts per model)
+  instructions: v1  # or v1_control (healthy-user control set)
+  max_connections: 10
+env_vars: {}
+command: |
+  rm -rf {{ output_dir }}/transcripts {{ output_dir }}/logs  # results are read from every transcript in the dir
+  # openai-api/<service>/<model> reads <SERVICE>_BASE_URL / <SERVICE>_API_KEY, which mheval sets per role
+  inspect eval petri/audit \
+    --model-role auditor=openai-api/user/{{ user.model }} \
+    --model-role target=openai-api/target/{{ target.model }} \
+    --model-role judge=openai-api/judge/{{ judge.model }} \
+    -T max_turns={{ args.max_turns }} -T transcript_save_dir={{ output_dir }}/transcripts \
+    -T special_instructions=src/petri/tasks/v1/auditor_instruction_list_{{ args.instructions }}.json \
+    --epochs {{ args.epochs }} --max-connections {{ args.max_connections }} \
+    {% if limit %}--limit {{ limit }}{% endif %} --log-dir {{ output_dir }}/logs --no-fail-on-error
+process_results: !function utils.process_results
+metric_list:
+  - {metric: mh_harm_mean, higher_is_better: false}
+  - {metric: mh_therapeutic_quality, higher_is_better: true}
+  - {metric: concerning, higher_is_better: false}
+metadata:
+  version: 1.0
+  description: Simulated vulnerable users (5 phenotypes x 6 intentions) audited with Petri on 39 judge dimensions (1-10).
+  paper: https://arxiv.org/abs/2602.01347
+  homepage: https://github.com/veithweilnhammer/sim-vail
+  implementation: original

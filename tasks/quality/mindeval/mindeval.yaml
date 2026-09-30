@@ -1,0 +1,52 @@
+task: mindeval
+tag: [quality]
+source:
+  - repo: https://github.com/SWORDHealth/mind-eval
+    commit: 1c17f9e66c092d9480c4bda5a2bebc80b7f84961
+env:
+  python: "3.12"
+  install:
+    - uv pip install -e .
+roles:  # run_benchmark.sh: member claude-haiku-4-5, judge claude-sonnet-4-5, both high reasoning, 16k tokens
+  user: {model: anthropic/claude-haiku-4.5, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY,
+         max_completion_tokens: 16000, reasoning_effort: high}
+  judge: {model: anthropic/claude-sonnet-4.5, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY,
+          max_completion_tokens: 16000, reasoning_effort: high}
+generation_kwargs: {}
+task_args:
+  n_turns: 10       # run_benchmark.sh; one clinician + one patient message per turn = the paper's 20 turns
+  max_workers: 50   # run_benchmark.sh
+  clinician_template: v0_1  # run_benchmark.sh's `custom` is an unfilled placeholder in the repo
+  member_template: v0_2
+  judge_template: v0_1
+env_vars:  # litellm params, passed via env so API keys stay out of argv (jsonargparse default_env)
+  JSONARGPARSE_DEFAULT_ENV: "true"
+  GENERATE_INTERACTIONS_CLINICIAN_MODEL_API_PARAMS: >-
+    {{ {"model": "openai/" ~ target.model, "api_base": target.base_url, "api_key": env.TARGET_API_KEY} | merge(target.params) | tojson }}
+  GENERATE_INTERACTIONS_MEMBER_MODEL_API_PARAMS: >-
+    {{ {"model": "openai/" ~ user.model, "api_base": user.base_url, "api_key": env.USER_API_KEY} | merge(user.params) | tojson }}
+  GENERATE_JUDGMENTS_JUDGE_MODEL_API_PARAMS: >-
+    {{ {"model": "openai/" ~ judge.model, "api_base": judge.base_url, "api_key": env.JUDGE_API_KEY} | merge(judge.params) | tojson }}
+command: |
+  head -n {{ limit or 50 }} data/profiles.jsonl > {{ output_dir }}/profiles.jsonl
+  PYTHONPATH=. python mindeval/scripts/generate_interactions.py \
+    --profiles_path {{ output_dir }}/profiles.jsonl \
+    --clinician_system_template_version {{ args.clinician_template }} \
+    --member_system_template_version {{ args.member_template }} \
+    --n_turns {{ args.n_turns }} --max_workers {{ args.max_workers }} \
+    --output_path {{ output_dir }}/interactions.jsonl
+  PYTHONPATH=. python mindeval/scripts/generate_judgments.py \
+    --interactions_path {{ output_dir }}/interactions.jsonl \
+    --judge_template_version {{ args.judge_template }} \
+    --max_workers {{ args.max_workers }} \
+    --output_path {{ output_dir }}/judgments.jsonl
+process_results: !function utils.process_results
+metric_list:
+  - {metric: average_score, higher_is_better: true}  # paper headline (mean of the 5 criteria)
+  - {metric: overall_score, higher_is_better: true}
+metadata:
+  version: 1.0
+  description: Multi-turn therapy sessions with a simulated patient, judged on 5 clinical criteria (1-6).
+  paper: https://arxiv.org/abs/2511.18491
+  homepage: https://github.com/SWORDHealth/mind-eval
+  implementation: original

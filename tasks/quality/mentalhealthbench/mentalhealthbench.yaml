@@ -1,0 +1,34 @@
+task: mentalhealthbench
+tag: [quality]
+source:  # official data release (paper §8); OpenAI published no evaluation code
+  - url: https://cdn.openai.com/ctf-cdn/OAI_MentalHealthBench.zip
+    sha256: a3e94c7786bd514952c542d6a5694bb24055f136b417f15c5c6ab942976d7474
+    extract: true
+env:
+  python: "3.12"
+  install: []
+roles:
+  judge: {model: gpt-5.6-sol, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY, reasoning_effort: high}  # paper
+generation_kwargs: {}  # paper: each API's default sampling settings
+task_args:
+  n_samples: 4  # completions per task (paper)
+  workers: 32
+env_vars: {}
+command: >-
+  python {{ task_dir }}/harness.py
+  --data mentalhealthbench/mentalhealthbench_eval.jsonl
+  --n_samples {{ args.n_samples }}
+  --workers {{ args.workers }}
+  {% if limit %}--limit {{ limit }}{% endif %}
+process_results: null  # harness.py writes results.json
+metric_list:
+  - {metric: task_clipped_score, higher_is_better: true}
+  - {metric: signed_score, higher_is_better: true}
+  - {metric: positive_points_earned, higher_is_better: true}
+  - {metric: normalized_penalty_burden, higher_is_better: false}
+metadata:
+  version: 1.0
+  description: Next assistant turn in 1,215 synthetic conversations, graded against expert rubrics on 10 behavior axes.
+  paper: https://cdn.openai.com/ctf-cdn/MentalHealthBench_A_Comprehensive_Benchmark_of_AI_Capabilities_in_Realistic_Mental_Health_Conversations.pdf
+  homepage: https://cdn.openai.com/ctf-cdn/OAI_MentalHealthBench.zip
+  implementation: native

@@ -1,0 +1,36 @@
+task: counselbench_adv
+tag: [quality]
+source:
+  - repo: https://github.com/llm-eval-mental-health/CounselBench
+    commit: a33c4e5e0dc221c4a3caa1abc9e50364f9eb8c39
+  - url: https://huggingface.co/datasets/izi-ano/CounselBench-Eval/resolve/8d56a96ea1de3f3f190f77f4ca9bc3503d731af7/counselbench_eval.csv
+    sha256: 3754607cafb0af64a5e8fc863444da5845dd6499237b94b563b6a3dfea982130
+  - url: https://huggingface.co/datasets/izi-ano/CounselBench-Adv/resolve/57a2e2d5b709208197bbf8ff55124d4844067da3/counselbench_adv.csv
+    sha256: 9bd9649a0fc3dd3873172c4f6fe006a088b2273e738cc9ee32214c235794af28
+  - url: https://huggingface.co/datasets/izi-ano/CounselBench-Adv-human-annotation/resolve/106e8a55d48ad19d03b89035aa9f8f3fcf70df44/counselbench-adv-human-annotation.csv
+    sha256: 698cc09bb5596a681094b6b38c150a3847c3119d3c05f3f82cb0e2af0cae21fe
+env:
+  python: "3.12"
+  install:
+    - uv pip install pandas numpy tqdm
+roles:
+  judge: {model: gpt-4.1, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY}  # repo scripts
+generation_kwargs: {}  # set by the repo's model contract (temperature, max 1024 tokens)
+task_args:
+  workers: 16  # repo hard-codes 3 responses/post at temperature 0.7
+env_vars: {}
+command: >-
+  python {{ task_dir }}/harness.py --part adv
+  --adv_csv {{ src.counselbench_adv }}/counselbench_adv.csv
+  --adv_annotation_csv {{ src['counselbench-adv-human-annotation'] }}/counselbench-adv-human-annotation.csv
+  --workers {{ args.workers }}
+  {% if limit %}--limit {{ limit }}{% endif %}
+process_results: null  # harness.py writes results.json
+metric_list:
+  - {metric: failure_rate, higher_is_better: false}
+metadata:
+  version: 1.0
+  description: 120 adversarial questions targeting 6 failure modes; rate of responses showing the targeted issue.
+  paper: https://arxiv.org/abs/2506.08584
+  homepage: https://github.com/llm-eval-mental-health/CounselBench
+  implementation: original + adapter
