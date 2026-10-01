@@ -77,25 +77,29 @@ Full benchmarks with each task's default judges and user simulators, run in Sept
 
 | Model | cbt_bench<br>`mean_weighted_f1` ↑ | counselbench_adv<br>`failure_rate` ↓ | counselbench_eval<br>`overall` ↑ | eqbench3<br>`rubric_score` ↑ | healthbench_psych<br>`clipped_mean_score` ↑ | mentalhealthbench<br>`task_clipped_score` ↑ | mindeval<br>`average_score` ↑ |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `anthropic/claude-sonnet-4.5` | 0.600 | 0.567 | 5.000 | 72.35 | 0.433 | 0.402 | 3.718 |
-| `google/gemini-2.5-pro` | 0.630 | 0.536 | 5.000 | 74.25 | 0.484 | 0.295 | 3.756 |
-| `gpt-4o-2024-08-06` | 0.602 | 0.367 | 4.960 | 39.80 | 0.276 | 0.326 | 3.169 |
-| `gpt-5-2025-08-07` | 0.617 | 0.494 | 5.000 | 77.70 | 0.662 | 0.444 | 3.512 |
+| `anthropic/claude-sonnet-4.5` | 0.600 | 0.567 | **5.000** | 72.35 | 0.433 | 0.402 | 3.718 |
+| `google/gemini-2.5-pro` | **0.630** | 0.536 | **5.000** | 74.25 | 0.484 | 0.295 | **3.756** |
+| `gpt-4o-2024-08-06` | 0.602 | **0.367** | 4.960 | 39.80 | 0.276 | 0.326 | 3.169 |
+| `gpt-5-2025-08-07` | 0.617 | 0.494 | **5.000** | **77.70** | **0.662** | **0.444** | 3.512 |
+| `qwen/qwen3.5-27b` | 0.592 | 0.489 | 4.990 | 65.10 | 0.541 | 0.367 | 3.598 |
 
 #### Safety
 
 | Model | sim_vail<br>`mh_harm_mean` ↓ | spiral_bench<br>`score_0_100` ↑ | vera_mh<br>`vera_score` ↑ |
 | --- | ---: | ---: | ---: |
-| `anthropic/claude-sonnet-4.5` | 1.031 | 66.90 | 56.03 |
+| `anthropic/claude-sonnet-4.5` | **1.031** | **66.90** | 56.03 |
 | `google/gemini-2.5-pro` | 3.599 | 44.60 | 30.73 |
 | `gpt-4o-2024-08-06` | 2.911 | 54.60 | 28.18 |
-| `gpt-5-2025-08-07` | 2.158 | 60.80 | 62.29 |
+| `gpt-5-2025-08-07` | 2.158 | 60.80 | **62.29** |
+| `qwen/qwen3.5-27b` | 1.759 | 42.80 | 39.58 |
 
 Models under test:
 - `gpt-4o-2024-08-06` and `gpt-5-2025-08-07` through the OpenAI API, at default reasoning effort.
-- `anthropic/claude-sonnet-4.5` and `google/gemini-2.5-pro` through OpenRouter.
+- `anthropic/claude-sonnet-4.5`, `google/gemini-2.5-pro` and `qwen/qwen3.5-27b` through OpenRouter.
 
-MindEval follows its paper in running reasoning-capable models at high effort: gpt-5, claude-sonnet-4.5 and gemini-2.5-pro use `reasoning_effort=high`. On CounselBench EVAL, the LLM judge rates nearly every answer from these models at the top of its scale, so `overall` separates them little. Per-dimension, per-criterion and per-group breakdowns are in each task's `results.json`.
+Bold marks the best score per benchmark.
+
+MindEval follows its paper in running reasoning-capable models at high effort: gpt-5, claude-sonnet-4.5, gemini-2.5-pro and qwen3.5-27b use `reasoning_effort=high`. qwen3.5-27b's long reasoning occasionally exceeds a benchmark's output cap and yields no answer, which is scored as given (e.g. 6% of CBT-Bench items); its VERA-MH score covers 199 of 200 conversations. On CounselBench EVAL, the LLM judge rates nearly every answer from these models at the top of its scale, so `overall` separates them little. Per-dimension, per-criterion and per-group breakdowns are in each task's `results.json`.
 
 To reproduce a row:
 
