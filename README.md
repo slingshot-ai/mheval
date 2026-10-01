@@ -139,6 +139,10 @@ API keys are read from the environment variables named by `api_key_env`. The def
 
 EQ-Bench 3 and Spiral-Bench resume from an existing task directory; delete it to start over.
 
+### Submitting to the leaderboard
+
+Every full run (without `--limit`) also writes `results/<model>/submission/`, laid out exactly like the [leaderboard repository](https://github.com/slingshot-ai/mheval-leaderboard): copy its contents into the leaderboard repo, fill in the model card, and open a pull request. See the [leaderboard README](https://github.com/slingshot-ai/mheval-leaderboard#submitting-results) for details.
+
 ## Task configuration
 
 Each task is one YAML file, and every file has the same keys:

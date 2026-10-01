@@ -7,6 +7,7 @@ Every task produces results in the same schema:
 """
 from __future__ import annotations
 
+import datetime
 import json
 import subprocess
 from pathlib import Path
@@ -14,7 +15,8 @@ from pathlib import Path
 import jinja2
 import jinja2.meta
 
-from .config import ROLES, Role, TaskConfig
+from . import __version__
+from .config import ROLES, Role, TaskConfig, task_sha256
 from .workspace import prepare, source_name, venv_env
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -67,11 +69,20 @@ def run_task(cfg: TaskConfig, roles: dict[str, Role | None], output_dir: Path, *
 
     if cfg.process_results:
         res = cfg.process_results.resolve(cfg.task_dir)(output_dir, ctx)
-        (output_dir / "results.json").write_text(json.dumps(res, indent=2))
     else:
         res = json.loads((output_dir / "results.json").read_text())
+    res["meta"] = {  # provenance, checked by the leaderboard
+        "mheval_version": __version__,
+        "task": cfg.task,
+        "task_sha256": task_sha256(cfg),
+        "roles": {r: {"model": v["model"], "params": v["params"]} for r in ROLES if (v := ctx[r])},
+        "task_args": ctx["args"],
+        "limit": limit,
+        "date": datetime.date.today().isoformat(),
+    }
+    (output_dir / "results.json").write_text(json.dumps(res, indent=2))
     primary = cfg.metric_list[0]["metric"]
     return {"primary": {"metric": primary, "value": res["metrics"].get(primary),
                         "higher_is_better": cfg.metric_list[0].get("higher_is_better", True)},
             "metrics": res["metrics"], "breakdown": res.get("breakdown", {}), "n": res.get("n"),
-            "roles": {r: v["model"] for r in ROLES if (v := ctx[r])}, "output_dir": ctx["output_dir"]}
+            "meta": res["meta"], "output_dir": ctx["output_dir"]}
