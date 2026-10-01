@@ -6,6 +6,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Benchmarks](https://img.shields.io/badge/benchmarks-9-informational.svg)](#benchmarks)
+[![Leaderboard](https://img.shields.io/badge/leaderboard-live-blueviolet.svg)](https://slingshot-ai.github.io/mheval-leaderboard/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
@@ -71,42 +72,7 @@ python -m mheval.report results/                     # Markdown summary of all r
 
 ## Results
 
-Full benchmarks with each task's default judges and user simulators, run in September 2026. Arrows show the better direction; see [Benchmarks](#benchmarks) for scales.
-
-### Quality
-
-| Model | cbt_bench<br>`mean_weighted_f1` ↑ | counselbench_adv<br>`failure_rate` ↓ | counselbench_eval<br>`overall` ↑ | eqbench3<br>`rubric_score` ↑ | healthbench_psych<br>`clipped_mean_score` ↑ | mentalhealthbench<br>`task_clipped_score` ↑ | mindeval<br>`average_score` ↑ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `anthropic/claude-sonnet-4.5` | 0.600 | 0.567 | **5.000** | 72.35 | 0.433 | 0.402 | 3.718 |
-| `google/gemini-2.5-pro` | **0.630** | 0.536 | **5.000** | 74.25 | 0.484 | 0.295 | **3.756** |
-| `gpt-4o-2024-08-06` | 0.602 | **0.367** | 4.960 | 39.80 | 0.276 | 0.326 | 3.169 |
-| `gpt-5-2025-08-07` | 0.617 | 0.494 | **5.000** | **77.70** | **0.662** | **0.444** | 3.512 |
-| `qwen/qwen3.5-27b` | 0.592 | 0.489 | 4.990 | 65.10 | 0.541 | 0.367 | 3.598 |
-
-### Safety
-
-| Model | sim_vail<br>`mh_harm_mean` ↓ | spiral_bench<br>`score_0_100` ↑ | vera_mh<br>`vera_score` ↑ |
-| --- | ---: | ---: | ---: |
-| `anthropic/claude-sonnet-4.5` | **1.031** | **66.90** | 56.03 |
-| `google/gemini-2.5-pro` | 3.599 | 44.60 | 30.73 |
-| `gpt-4o-2024-08-06` | 2.911 | 54.60 | 28.18 |
-| `gpt-5-2025-08-07` | 2.158 | 60.80 | **62.29** |
-| `qwen/qwen3.5-27b` | 1.759 | 42.80 | 39.58 |
-
-Models under test:
-- `gpt-4o-2024-08-06` and `gpt-5-2025-08-07` through the OpenAI API, at default reasoning effort.
-- `anthropic/claude-sonnet-4.5`, `google/gemini-2.5-pro` and `qwen/qwen3.5-27b` through OpenRouter.
-
-Bold marks the best score per benchmark.
-
-MindEval follows its paper in running reasoning-capable models at high effort: gpt-5, claude-sonnet-4.5, gemini-2.5-pro and qwen3.5-27b use `reasoning_effort=high`. qwen3.5-27b's long reasoning occasionally exceeds a benchmark's output cap and yields no answer, which is scored as given (e.g. 6% of CBT-Bench items); its VERA-MH score covers 199 of 200 conversations. On CounselBench EVAL, the LLM judge rates nearly every answer from these models at the top of its scale, so `overall` separates them little. Per-dimension, per-criterion and per-group breakdowns are in each task's `results.json`.
-
-To reproduce a row:
-
-```bash
-mheval --tasks quality,safety --model_args model=gpt-5-2025-08-07
-mheval --tasks mindeval --model_args model=gpt-5-2025-08-07 --gen_kwargs reasoning_effort=high
-```
+Scores for each model are on the **[Mental Health Evaluation Leaderboard](https://slingshot-ai.github.io/mheval-leaderboard/)**. Submissions are pull requests of the files `mheval` writes; see [Submitting to the leaderboard](#submitting-to-the-leaderboard).
 
 ## Usage
 
