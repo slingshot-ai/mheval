@@ -1,16 +1,36 @@
-# mentalhealth-evals
+# Mental Health Evaluation Harness
 
-A single interface for running mental-health benchmarks against any language model.
+**Mental-health LLM benchmarks, run from their original repositories behind one interface.**
 
-Each benchmark runs from **its original repository**: pinned to a commit, installed in its own isolated `uv` environment, and invoked through its own entry points, prompts, judges and scoring code. A thin adapter is added only where the original cannot run an arbitrary model. The model under test, the judge and the user simulator can each be any OpenAI-compatible endpoint: OpenAI, OpenRouter, vLLM, SGLang, LiteLLM, and so on.
+[![CI](https://github.com/slingshot-ai/mheval/actions/workflows/ci.yml/badge.svg)](https://github.com/slingshot-ai/mheval/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Benchmarks](https://img.shields.io/badge/benchmarks-9-informational.svg)](#benchmarks)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
-## Quick start
+The Mental Health Evaluation Harness (`mheval`) evaluates any language model on nine published therapy and mental-health benchmarks (quality and safety) with a single command. Each benchmark runs from **its original repository**: pinned to a commit, installed in its own isolated `uv` environment, and invoked through its own prompts, judges and scoring code. A thin adapter is added only where the original cannot run an arbitrary model.
+
+- **Faithful.** Original code, pinned commits, sha256-verified data, and each paper's evaluation settings.
+- **Any endpoint.** The model under test, judges and user simulators are each any OpenAI-compatible API: OpenAI, OpenRouter, vLLM, SGLang, LiteLLM, and so on.
+- **One result schema.** Every task reports a headline metric, all metrics, and per-dimension breakdowns in the same JSON shape.
+- **Declarative tasks.** One YAML file per benchmark, all with the same keys; adding a benchmark rarely needs new code.
+
+## Installation
 
 Requires Python ≥ 3.10, [`uv`](https://docs.astral.sh/uv/) and `git`.
 
 ```bash
+git clone https://github.com/slingshot-ai/mheval.git
+cd mheval
 uv venv && uv pip install -e .
+```
 
+On first use, each task clones its source repository, downloads its data and builds its environment under `$MHEVAL_HOME` (default `~/.cache/mheval`). API keys are read from environment variables (see [Usage](#usage)).
+
+## Quick start
+
+```bash
 mheval --tasks list                                  # available tasks and tags
 
 # a local vLLM server, all quality benchmarks
@@ -27,11 +47,9 @@ mheval --tasks mindeval \
 python -m mheval.report results/                     # Markdown summary of all runs
 ```
 
-On first use, each task clones its source repository, downloads its data (sha256-verified) and builds its environment under `$MHEVAL_HOME` (default `~/.cache/mheval`).
-
 ## Benchmarks
 
-### Therapy and mental health: quality
+### Quality
 
 | Benchmark | Task | What it tests | Default judge / user simulator | Headline metric | Breakdowns |
 |---|---|---|---|---|---|
@@ -43,7 +61,7 @@ On first use, each task clones its source repository, downloads its data (sha256
 | | `counselbench_adv` | 120 adversarial questions (Adv) | `gpt-4.1` | `failure_rate` (0–1) | 6 failure modes |
 | [CBT-Bench](https://github.com/mianzhang/CBT-Bench) | `cbt_bench` | Cognitive distortion and core-belief classification (Level II) | answer extraction `gpt-4o` | `mean_weighted_f1` (0–1) | subtask precision / recall / F1, per-label F1 |
 
-### Therapy and mental health: safety
+### Safety
 
 | Benchmark | Task | What it tests | Default judge / user simulator | Headline metric | Breakdowns |
 |---|---|---|---|---|---|
@@ -55,29 +73,33 @@ On first use, each task clones its source repository, downloads its data (sha256
 
 Full benchmarks with each task's default judges and user simulators, run in September 2026. Arrows show the better direction; see [Benchmarks](#benchmarks) for scales.
 
-#### Quality
+### Quality
 
 | Model | cbt_bench<br>`mean_weighted_f1` ↑ | counselbench_adv<br>`failure_rate` ↓ | counselbench_eval<br>`overall` ↑ | eqbench3<br>`rubric_score` ↑ | healthbench_psych<br>`clipped_mean_score` ↑ | mentalhealthbench<br>`task_clipped_score` ↑ | mindeval<br>`average_score` ↑ |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `anthropic/claude-sonnet-4.5` | 0.600 | 0.567 | 5.000 | 72.35 | 0.433 | 0.402 | 3.718 |
-| `google/gemini-2.5-pro` | 0.630 | 0.536 | 5.000 | 74.25 | 0.484 | 0.295 | 3.756 |
-| `gpt-4o-2024-08-06` | 0.602 | 0.367 | 4.960 | 39.80 | 0.276 | 0.326 | 3.169 |
-| `gpt-5-2025-08-07` | 0.617 | 0.494 | 5.000 | 77.70 | 0.662 | 0.444 | 3.512 |
+| `anthropic/claude-sonnet-4.5` | 0.600 | 0.567 | **5.000** | 72.35 | 0.433 | 0.402 | 3.718 |
+| `google/gemini-2.5-pro` | **0.630** | 0.536 | **5.000** | 74.25 | 0.484 | 0.295 | **3.756** |
+| `gpt-4o-2024-08-06` | 0.602 | **0.367** | 4.960 | 39.80 | 0.276 | 0.326 | 3.169 |
+| `gpt-5-2025-08-07` | 0.617 | 0.494 | **5.000** | **77.70** | **0.662** | **0.444** | 3.512 |
+| `qwen/qwen3.5-27b` | 0.592 | 0.489 | 4.990 | 65.10 | 0.541 | 0.367 | 3.598 |
 
-#### Safety
+### Safety
 
 | Model | sim_vail<br>`mh_harm_mean` ↓ | spiral_bench<br>`score_0_100` ↑ | vera_mh<br>`vera_score` ↑ |
 | --- | ---: | ---: | ---: |
-| `anthropic/claude-sonnet-4.5` | 1.031 | 66.90 | 56.03 |
+| `anthropic/claude-sonnet-4.5` | **1.031** | **66.90** | 56.03 |
 | `google/gemini-2.5-pro` | 3.599 | 44.60 | 30.73 |
 | `gpt-4o-2024-08-06` | 2.911 | 54.60 | 28.18 |
-| `gpt-5-2025-08-07` | 2.158 | 60.80 | 62.29 |
+| `gpt-5-2025-08-07` | 2.158 | 60.80 | **62.29** |
+| `qwen/qwen3.5-27b` | 1.759 | 42.80 | 39.58 |
 
 Models under test:
 - `gpt-4o-2024-08-06` and `gpt-5-2025-08-07` through the OpenAI API, at default reasoning effort.
-- `anthropic/claude-sonnet-4.5` and `google/gemini-2.5-pro` through OpenRouter.
+- `anthropic/claude-sonnet-4.5`, `google/gemini-2.5-pro` and `qwen/qwen3.5-27b` through OpenRouter.
 
-MindEval follows its paper in running reasoning-capable models at high effort: gpt-5, claude-sonnet-4.5 and gemini-2.5-pro use `reasoning_effort=high`. On CounselBench EVAL, the LLM judge rates nearly every answer from these models at the top of its scale, so `overall` separates them little. Per-dimension, per-criterion and per-group breakdowns are in each task's `results.json`.
+Bold marks the best score per benchmark.
+
+MindEval follows its paper in running reasoning-capable models at high effort: gpt-5, claude-sonnet-4.5, gemini-2.5-pro and qwen3.5-27b use `reasoning_effort=high`. qwen3.5-27b's long reasoning occasionally exceeds a benchmark's output cap and yields no answer, which is scored as given (e.g. 6% of CBT-Bench items); its VERA-MH score covers 199 of 200 conversations. On CounselBench EVAL, the LLM judge rates nearly every answer from these models at the top of its scale, so `overall` separates them little. Per-dimension, per-criterion and per-group breakdowns are in each task's `results.json`.
 
 To reproduce a row:
 
@@ -189,12 +211,20 @@ Where a task departs from the benchmark's own scripts, it is listed here.
 - **SIM-VAIL.** The repository provides a Petri override bundle rather than a runner. The task pins Petri to `dc9fba3`, the last commit before the published runs, applies the bundle, and runs `inspect eval petri/audit` with 3 epochs of the 30 instructions. `mh_harm_mean`, the mean of the ten harm-oriented mental-health dimensions, is a summary added here; every judge dimension is reported.
 - **API robustness.** Adapters that call the API directly handle a few endpoint behaviors, logging each one. An endpoint that rejects `temperature` gets the API default, and `max_tokens` is sent as `max_completion_tokens`. An answer cut off at a benchmark's output cap after hidden reasoning is retried with 16k extra tokens; the caps (e.g. CounselBench's 1,024) were set for non-reasoning models, where they limit only the visible answer. Empty answers other than refusals, and generations that fail upstream, are retried up to twice, following HealthBench-Psych's generation code. Each request has a 15-minute deadline.
 
-## Development
+## Contributing
+
+Issues and pull requests are welcome. To set up a development environment and run the checks that CI runs:
 
 ```bash
 uv pip install -e . pytest ruff
 pytest && ruff check .
 ```
+
+To add a benchmark, follow [Task configuration](#task-configuration). Please keep each benchmark's original code untouched, and put anything harness-specific in the task's own directory.
+
+## Acknowledgements
+
+`mheval` only orchestrates. The benchmarks, data, prompts and scoring belong to their authors: [MentalHealthBench](https://cdn.openai.com/ctf-cdn/MentalHealthBench_A_Comprehensive_Benchmark_of_AI_Capabilities_in_Realistic_Mental_Health_Conversations.pdf), [MindEval](https://github.com/SWORDHealth/mind-eval), [HealthBench-Psych](https://github.com/mindbench-ai/healthbench-psych), [EQ-Bench 3](https://github.com/EQ-bench/eqbench3), [CounselBench](https://github.com/llm-eval-mental-health/CounselBench), [CBT-Bench](https://github.com/mianzhang/CBT-Bench), [VERA-MH](https://github.com/SpringCare/VERA-MH), [Spiral-Bench](https://github.com/sam-paech/spiral-bench), [SIM-VAIL](https://github.com/veithweilnhammer/sim-vail) (with [Petri](https://github.com/safety-research/petri)). Please cite the original papers when reporting results.
 
 ## License
 
