@@ -226,6 +226,21 @@ To add a benchmark, follow [Task configuration](#task-configuration). Please kee
 
 `mheval` only orchestrates. The benchmarks, data, prompts and scoring belong to their authors: [MentalHealthBench](https://cdn.openai.com/ctf-cdn/MentalHealthBench_A_Comprehensive_Benchmark_of_AI_Capabilities_in_Realistic_Mental_Health_Conversations.pdf), [MindEval](https://github.com/SWORDHealth/mind-eval), [HealthBench-Psych](https://github.com/mindbench-ai/healthbench-psych), [EQ-Bench 3](https://github.com/EQ-bench/eqbench3), [CounselBench](https://github.com/llm-eval-mental-health/CounselBench), [CBT-Bench](https://github.com/mianzhang/CBT-Bench), [VERA-MH](https://github.com/SpringCare/VERA-MH), [Spiral-Bench](https://github.com/sam-paech/spiral-bench), [SIM-VAIL](https://github.com/veithweilnhammer/sim-vail) (with [Petri](https://github.com/safety-research/petri)). Please cite the original papers when reporting results.
 
+## Citation
+
+If you use this harness, please cite it as below, together with the original papers of the benchmarks you report (see [Acknowledgements](#acknowledgements)).
+
+```bibtex
+@misc{mheval,
+  author       = {Zhu, Ziyi},
+  title        = {Mental Health Evaluation Harness},
+  year         = 2026,
+  version      = {v0.1.0},
+  publisher    = {GitHub},
+  url          = {https://github.com/slingshot-ai/mheval}
+}
+```
+
 ## License
 
 MIT. Each benchmark keeps the license of its original repository and dataset.

@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below, and cite the original papers of the benchmarks you report."
+title: "Mental Health Evaluation Harness"
+abstract: "Run mental-health LLM benchmarks from their original repositories behind one interface."
+type: software
+authors:
+  - family-names: Zhu
+    given-names: Ziyi
+version: 0.1.0
+date-released: 2026-10-01
+license: MIT
+repository-code: "https://github.com/slingshot-ai/mheval"
+url: "https://github.com/slingshot-ai/mheval"
+keywords:
+  - llm-evaluation
+  - benchmark
+  - mental-health
+  - ai-safety
+  - llm-as-a-judge
