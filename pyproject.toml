@@ -1,15 +1,34 @@
 [project]
 name = "mheval"
 version = "0.1.0"
-description = "Mental-health eval harness that runs each benchmark's original code behind one interface."
+description = "Run mental-health LLM benchmarks from their original repositories behind one interface."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
+authors = [{ name = "Ziyi Zhu" }]
+keywords = ["llm", "evaluation", "benchmark", "mental-health", "ai-safety", "llm-as-a-judge"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "jinja2>=3.1",
     "pyyaml>=6.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/slingshot-ai/mheval"
+Repository = "https://github.com/slingshot-ai/mheval"
+Issues = "https://github.com/slingshot-ai/mheval/issues"
 
 [project.scripts]
 mheval = "mheval.__main__:main"
