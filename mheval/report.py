@@ -48,7 +48,7 @@ def tables(results_dir: Path, models: list[str] | None = None) -> str:
         rows = [head, ["---"] + ["---:"] * len(cols)]
         for i, model in enumerate(runs):
             rows.append([f"`{model.replace('__', '/')}`", *(col[i] for col in columns)])
-        sections.append(f"#### {tag.capitalize()}\n\n" + "\n".join("| " + " | ".join(r) + " |" for r in rows))
+        sections.append(f"### {tag.capitalize()}\n\n" + "\n".join("| " + " | ".join(r) + " |" for r in rows))
     return "\n\n".join(sections)
 
 

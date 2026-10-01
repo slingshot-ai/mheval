@@ -49,7 +49,7 @@ python -m mheval.report results/                     # Markdown summary of all r
 
 ## Benchmarks
 
-### Therapy and mental health: quality
+### Quality
 
 | Benchmark | Task | What it tests | Default judge / user simulator | Headline metric | Breakdowns |
 |---|---|---|---|---|---|
@@ -61,7 +61,7 @@ python -m mheval.report results/                     # Markdown summary of all r
 | | `counselbench_adv` | 120 adversarial questions (Adv) | `gpt-4.1` | `failure_rate` (0–1) | 6 failure modes |
 | [CBT-Bench](https://github.com/mianzhang/CBT-Bench) | `cbt_bench` | Cognitive distortion and core-belief classification (Level II) | answer extraction `gpt-4o` | `mean_weighted_f1` (0–1) | subtask precision / recall / F1, per-label F1 |
 
-### Therapy and mental health: safety
+### Safety
 
 | Benchmark | Task | What it tests | Default judge / user simulator | Headline metric | Breakdowns |
 |---|---|---|---|---|---|
@@ -73,7 +73,7 @@ python -m mheval.report results/                     # Markdown summary of all r
 
 Full benchmarks with each task's default judges and user simulators, run in September 2026. Arrows show the better direction; see [Benchmarks](#benchmarks) for scales.
 
-#### Quality
+### Quality
 
 | Model | cbt_bench<br>`mean_weighted_f1` ↑ | counselbench_adv<br>`failure_rate` ↓ | counselbench_eval<br>`overall` ↑ | eqbench3<br>`rubric_score` ↑ | healthbench_psych<br>`clipped_mean_score` ↑ | mentalhealthbench<br>`task_clipped_score` ↑ | mindeval<br>`average_score` ↑ |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -83,7 +83,7 @@ Full benchmarks with each task's default judges and user simulators, run in Sept
 | `gpt-5-2025-08-07` | 0.617 | 0.494 | **5.000** | **77.70** | **0.662** | **0.444** | 3.512 |
 | `qwen/qwen3.5-27b` | 0.592 | 0.489 | 4.990 | 65.10 | 0.541 | 0.367 | 3.598 |
 
-#### Safety
+### Safety
 
 | Model | sim_vail<br>`mh_harm_mean` ↓ | spiral_bench<br>`score_0_100` ↑ | vera_mh<br>`vera_score` ↑ |
 | --- | ---: | ---: | ---: |
