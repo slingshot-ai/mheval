@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import importlib.util
 import json
 import os
@@ -95,6 +96,14 @@ class TaskConfig:
         if extra := raw.keys() - fields:
             raise ValueError(f"{path}: unknown keys {sorted(extra)}")
         return cls(**raw, task_dir=path.parent)
+
+
+def task_sha256(cfg: TaskConfig) -> str:
+    """Fingerprint of a task's definition: every file in its directory (YAML, adapters, prompts)."""
+    h = hashlib.sha256()
+    for path in sorted(p for p in cfg.task_dir.rglob("*") if p.is_file() and "__pycache__" not in p.parts):
+        h.update(str(path.relative_to(cfg.task_dir)).encode() + b"\0" + path.read_bytes() + b"\0")
+    return h.hexdigest()
 
 
 def load_tasks(include_paths: list[str] = ()) -> dict[str, TaskConfig]:

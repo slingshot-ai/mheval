@@ -9,10 +9,10 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
-import re
 import traceback
 from pathlib import Path
 
+from . import submission
 from .config import load_tasks, parse_kv, select
 from .evaluator import run_task
 from .workspace import prepare
@@ -48,12 +48,15 @@ def main() -> None:
 
     roles = {"target": a.model_args, "judge": a.judge_args, "user": a.user_args}
     model = parse_kv(a.model_args)["model"]
-    run_dir = a.output_path / re.sub(r"[^\w.-]+", "__", str(model))
+    run_dir = a.output_path / submission.model_id(str(model))
     results, failed = {}, {}
     for cfg in tasks:
         try:
             results[cfg.task] = run_task(cfg, roles, run_dir / cfg.task, limit=a.limit,
                                          gen_kwargs=parse_kv(a.gen_kwargs), task_args=parse_kv(a.task_args))
+            if a.limit is None:  # only full runs are eligible for the leaderboard
+                submission.write(run_dir, str(model), cfg.task,
+                                 json.loads((run_dir / cfg.task / "results.json").read_text()))
         except Exception as e:  # a failed task is reported at the end; the others still run
             traceback.print_exc()
             failed[cfg.task] = repr(e)
@@ -69,6 +72,8 @@ def main() -> None:
     for task, err in failed.items():
         print(f"FAILED {task}: {err}")
     print(f"Saved {path}")
+    if a.limit is None and results:
+        print(f"Leaderboard submission files: {run_dir / 'submission'} (see the leaderboard README)")
 
 
 def table(results: dict, cfgs: dict) -> str:
