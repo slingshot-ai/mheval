@@ -16,6 +16,7 @@ def test_write_lays_out_leaderboard_files(tmp_path):
     assert json.loads(out.read_text()) == result
     card = tmp_path / "submission/models/org__model-x.yaml"
     assert "name: org/model-x" in card.read_text()
+    assert "display_name: org/model-x" in card.read_text()
 
     card.write_text("edited")  # a filled-in model card is never overwritten by later tasks
     submission.write(tmp_path, "org/model-x", "cbt_bench", result)
