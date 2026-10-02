@@ -14,10 +14,12 @@ from pathlib import Path
 
 MODEL_TEMPLATE = """\
 # Model card for the leaderboard. Replace every TODO.
+#   display_name: shown on the leaderboard, e.g. "GPT-5" (defaults to the model id)
 #   access: open-weights | public-api | private
 #   url: model card, API docs or paper
 #   submitted_by: your GitHub handle, e.g. "@octocat"
 name: {model}
+display_name: {model}
 organization: TODO
 access: TODO
 url: TODO
