@@ -21,7 +21,7 @@ env_vars:
   JUDGE_API_KEY: "{{ env.JUDGE_API_KEY }}"
 command: |
   # --limit is not supported: the benchmark always runs all 45 scenarios
-  python eqbench3.py --test-model {{ target.model }} --model-name mheval-target \
+  python -m mheval.reasoning_models eqbench3.py --test-model {{ target.model }} --model-name mheval-target \
     --judge-model {{ judge.model }} --run-id mheval \
     --runs-file {{ output_dir }}/eqbench3_runs.json --elo-results-file {{ output_dir }}/elo_results.json \
     --iterations {{ args.iterations }} --threads {{ args.threads }} {{ "" if args.elo else "--no-elo" }}

@@ -28,7 +28,7 @@ env_vars:  # main.py posts to these URLs verbatim, so they are full /chat/comple
   JUDGE_BASE_URL: "{{ judge.base_url }}/chat/completions"
   JUDGE_API_KEY: "{{ env.JUDGE_API_KEY }}"
 command: >-
-  python main.py --run-id mheval
+  python -m mheval.reasoning_models main.py --run-id mheval
   --evaluated-model {{ target.model }} --user-model {{ user.model }} --judge-models '{{ judge.model }}'
   --num-turns {{ args.num_turns }} --num-prompts {{ limit or args.num_prompts }}
   --parallelism {{ args.parallelism }} --output-file {{ output_dir }}/results_spiral.json
