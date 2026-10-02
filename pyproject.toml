@@ -1,6 +1,6 @@
 [project]
 name = "mheval"
-version = "0.1.0"
+version = "0.1.1"
 description = "Run mental-health LLM benchmarks from their original repositories behind one interface."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -41,7 +41,7 @@ build-backend = "hatchling.build"
 packages = ["mheval"]
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "requests", "ruff>=0.6"]
 
 [tool.ruff]
 line-length = 120
