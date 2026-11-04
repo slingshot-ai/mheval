@@ -12,6 +12,12 @@ env:
   python: "3.12"
   install:
     - cp -r ../sim-vail/repro/petri_overrides/src/petri/. src/petri/
+    # Petri names a transcript after the second it finished and the sample id, so epochs of one sample finishing in
+    # the same second overwrote each other and went uncounted; the name also carries the epoch and the sample's uuid.
+    - >-
+      python -c "from pathlib import Path; p = Path('src/petri/hooks/transcript_hook.py'); s = p.read_text();
+      assert s.count('_{sample.id}.json') == 2;
+      p.write_text(s.replace('_{sample.id}.json', '_{sample.id}_epoch{sample.epoch}_{sample.uuid}.json'))"
     - uv sync --frozen
 roles:  # v1 transcripts: auditor claude-sonnet-4.5, judge claude-opus-4.5 (both via OpenRouter)
   user: {model: anthropic/claude-sonnet-4.5, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY}
