@@ -202,10 +202,10 @@ If you use this harness, please cite it as below, together with the original pap
 
 ```bibtex
 @misc{mheval,
-  author       = {Zhu, Ziyi},
+  author       = {Zhu, Ziyi and Shah, Raahil},
   title        = {Mental Health Evaluation Harness},
   year         = 2026,
-  version      = {v0.1.0},
+  version      = {v0.1.2},
   publisher    = {GitHub},
   url          = {https://github.com/slingshot-ai/mheval}
 }

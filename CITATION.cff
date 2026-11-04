@@ -6,8 +6,10 @@ type: software
 authors:
   - family-names: Zhu
     given-names: Ziyi
-version: 0.1.0
-date-released: 2026-10-01
+  - family-names: Shah
+    given-names: Raahil
+version: 0.1.2
+date-released: 2026-11-04
 license: MIT
 repository-code: "https://github.com/slingshot-ai/mheval"
 url: "https://github.com/slingshot-ai/mheval"
