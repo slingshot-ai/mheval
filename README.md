@@ -6,7 +6,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Benchmarks](https://img.shields.io/badge/benchmarks-10-informational.svg)](#benchmarks)
-[![Leaderboard](https://img.shields.io/badge/leaderboard-live-blueviolet.svg)](https://slingshot-ai.github.io/mheval-leaderboard/)
+[![Leaderboard](https://img.shields.io/badge/leaderboard-live-blueviolet.svg)](https://mheval.slingshotai.com/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
@@ -73,7 +73,7 @@ python -m mheval.report results/                     # Markdown summary of all r
 
 ## Results
 
-Scores for each model are on the **[Mental Health Evaluation Leaderboard](https://slingshot-ai.github.io/mheval-leaderboard/)**. Submissions are pull requests of the files `mheval` writes; see [Submitting to the leaderboard](#submitting-to-the-leaderboard).
+Scores for each model are on the **[Mental Health Evaluation Leaderboard](https://mheval.slingshotai.com/)**. Submissions are pull requests of the files `mheval` writes; see [Submitting to the leaderboard](#submitting-to-the-leaderboard).
 
 ## Usage
 
