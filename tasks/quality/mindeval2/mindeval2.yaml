@@ -1,0 +1,67 @@
+task: mindeval2
+tag: [quality]
+source:
+  # MindEval 2 is master from fd2bbfe (2026-10-03) on; MindEval 1 (task `mindeval`) is the `legacy` branch, 1c17f9e.
+  - repo: https://github.com/SWORDHealth/mind-eval
+    commit: f870ac90ccbba911942c097c502c12c90d808627
+env:
+  python: "3.12"
+  install:
+    - uv sync --frozen
+roles:
+  # The paper's patient, DeepSeek-V4.1-Flash at temperature 1.0 with thinking on (§5.1), reached through OpenRouter
+  # rather than vLLM. Every turn starts with a tool call that names `commit_move` in `tool_choice`, so only
+  # providers that honour that parameter are used.
+  user: {model: deepseek/deepseek-v4.1-flash, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY,
+         extra_body: {reasoning: {enabled: true}, provider: {require_parameters: true}}}
+  # README and paper: GPT-6.1 Sol at high reasoning effort, no temperature, 32,768 tokens (the script's defaults)
+  judge: {model: gpt-6.1-sol, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY,
+          reasoning_effort: high}
+generation_kwargs: {temperature: 1.0}  # paper §5.1: every counselor at temperature 1.0 with its provider's defaults
+task_args:
+  sessions: 3       # paper §5.1 and the script's defaults: 50 members x 3 sessions of at most 30 counselor replies
+  max_turns: 30
+  seed: 0
+  max_workers: 16
+  # `chat`: the model under test through Chat Completions. `responses`: OpenAI reasoning models through the Responses
+  # API, the README's way of handing a counselor its own earlier reasoning back
+  counselor_api: chat
+env_vars:  # endpoints and keys through mind-eval's MINDEVAL_* environment, never argv
+  MINDEVAL_COUNSELOR_MODEL: >-
+    openai/{{ "responses/" if args.counselor_api == "responses" else "" }}{{ target.model }}
+  MINDEVAL_COUNSELOR_API_BASE: "{{ target.base_url }}"
+  MINDEVAL_COUNSELOR_API_KEY: "{{ env.TARGET_API_KEY }}"
+  MINDEVAL_PATIENT_MODEL: "openai/{{ user.model }}"
+  MINDEVAL_PATIENT_API_BASE: "{{ user.base_url }}"
+  MINDEVAL_PATIENT_API_KEY: "{{ env.USER_API_KEY }}"
+  MINDEVAL_JUDGE_MODEL: "openai/{{ judge.model }}"
+  MINDEVAL_JUDGE_API_BASE: "{{ judge.base_url }}"
+  MINDEVAL_JUDGE_API_KEY: "{{ env.JUDGE_API_KEY }}"
+  COUNSELOR_PARAMS: >-
+    {{ target.params | merge({"include": ["reasoning.encrypted_content"], "store": false}
+                             if args.counselor_api == "responses" else {}) | tojson }}
+  PATIENT_PARAMS: "{{ user.params | tojson }}"
+  JUDGE_PARAMS: "{{ judge.params | tojson }}"
+command: |
+  # Rerunning resumes: finished members and verdicts are kept. Exit 1 from either script means some members or
+  # replies are still pending; run the same command again to finish them.
+  # the counselor's temperature goes in its params (from generation_kwargs), not the script's own flag, which would
+  # override them
+  python mindeval/scripts/generate_interactions.py --output_dir {{ output_dir }} --counselor_temperature null \
+    --members {{ limit or 50 }} --sessions {{ args.sessions }} --max_turns {{ args.max_turns }} \
+    --seed {{ args.seed }} --max_workers {{ args.max_workers }} \
+    --counselor_params "$COUNSELOR_PARAMS" --patient_params "$PATIENT_PARAMS"
+  python mindeval/scripts/generate_judgments.py --output_dir {{ output_dir }} \
+    --judge_version mindeval2 --max_workers {{ args.max_workers }} --judge_params "$JUDGE_PARAMS"
+process_results: !function utils.process_results
+metric_list:
+  - {metric: mhqr, higher_is_better: false}  # paper headline (Table 6): mean weighted severity per session, 0-10
+  - {metric: mhqr_p99, higher_is_better: false}
+  - {metric: critical_session_rate, higher_is_better: false}
+  - {metric: major_or_worse_session_rate, higher_is_better: false}
+metadata:
+  version: 2.0
+  description: Three therapy sessions with a simulated patient who remembers the earlier ones; every reply judged for clinical issues by severity (0-10, lower is better).
+  paper: https://arxiv.org/abs/2610.22314
+  homepage: https://github.com/SWORDHealth/mind-eval
+  implementation: original

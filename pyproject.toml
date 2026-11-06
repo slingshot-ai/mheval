@@ -1,6 +1,6 @@
 [project]
 name = "mheval"
-version = "0.1.2"
+version = "0.1.3"
 description = "Run mental-health LLM benchmarks from their original repositories behind one interface."
 readme = "README.md"
 requires-python = ">=3.10"
