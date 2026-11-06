@@ -5,12 +5,12 @@
 [![CI](https://github.com/slingshot-ai/mheval/actions/workflows/ci.yml/badge.svg)](https://github.com/slingshot-ai/mheval/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Benchmarks](https://img.shields.io/badge/benchmarks-10-informational.svg)](#benchmarks)
+[![Benchmarks](https://img.shields.io/badge/benchmarks-11-informational.svg)](#benchmarks)
 [![Leaderboard](https://img.shields.io/badge/leaderboard-live-blueviolet.svg)](https://mheval.slingshotai.com/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
-The Mental Health Evaluation Harness (`mheval`) evaluates any language model on ten published therapy and mental-health benchmarks (quality and safety) with a single command. Each benchmark runs from **its original repository**: pinned to a commit, installed in its own isolated `uv` environment, and invoked through its own prompts, judges and scoring code. A thin adapter is added only where the original cannot run an arbitrary model.
+The Mental Health Evaluation Harness (`mheval`) evaluates any language model on eleven published therapy and mental-health benchmarks (quality and safety) with a single command. Each benchmark runs from **its original repository**: pinned to a commit, installed in its own isolated `uv` environment, and invoked through its own prompts, judges and scoring code. A thin adapter is added only where the original cannot run an arbitrary model.
 
 - **Faithful.** Original code, pinned commits, sha256-verified data, and each paper's evaluation settings.
 - **Any endpoint.** The model under test, judges and user simulators are each any OpenAI-compatible API: OpenAI, OpenRouter, vLLM, SGLang, LiteLLM, and so on.
@@ -59,6 +59,7 @@ python -m mheval.report results/                     # Markdown summary of all r
 | [MindEval 2](https://arxiv.org/abs/2610.22314) (Sword Health) | `mindeval2` | Three sessions per patient (up to 30 replies each) with a simulated patient who remembers the earlier ones; every reply judged for clinical issues | judge `gpt-6.1-sol`, high reasoning; patient `deepseek-v4.1-flash` | `mhqr` (0–10, lower is better) | reply severity, 14 issues, session |
 | [HealthBench-Psych](https://github.com/mindbench-ai/healthbench-psych) | `healthbench_psych` | Clinician-adjudicated mental-health subset of HealthBench | `gpt-4.1-2025-04-14` | `clipped_mean_score` (0–1) | theme, rubric axis |
 | [EQ-Bench 3](https://github.com/EQ-bench/eqbench3) | `eqbench3` | Emotional intelligence in multi-turn role-play and transcript analysis | `claude-opus-4.6` | `rubric_score` (0–100), `elo_normalized` | scenario type, 18 rubric criteria |
+| [EQ-Bench 4](https://eqbench.com/) | `eqbench4` | Emotional and social intelligence in 120 16-message role-play chats with a simulated user who reacts to how they are treated | persona `gemini-3.1-pro-preview`; pairwise judges `gemini-3.1-pro-preview`, `gpt-5.5`, `claude-opus-4-6`; traits `claude-opus-4-8` | `elo` (EQ-Bench 4 leaderboard scale) | 12 behavioural traits |
 | [CounselBench](https://github.com/llm-eval-mental-health/CounselBench) | `counselbench_eval` | Single-turn counseling answers (EVAL) | `gpt-4.1` | `overall` (1–5) | 6 metrics, topic |
 | | `counselbench_adv` | 120 adversarial questions (Adv) | `gpt-4.1` | `failure_rate` (0–1) | 6 failure modes |
 | [CBT-Bench](https://github.com/mianzhang/CBT-Bench) | `cbt_bench` | Cognitive distortion and core-belief classification (Level II) | answer extraction `gpt-4o` | `mean_weighted_f1` (0–1) | subtask precision / recall / F1, per-label F1 |
@@ -84,7 +85,7 @@ Scores for each model are on the **[Mental Health Evaluation Leaderboard](https:
 | `--judge_args`, `--user_args` | Override a task's default judge or user simulator (same syntax). Changing `model` drops model-specific defaults such as `reasoning_effort`. Changing `base_url` drops the default key, so no key is sent to a different provider. A comma-separated `model=a,b,c` stays one value; Spiral-Bench treats it as a judge ensemble. |
 | `--gen_kwargs` | Sampling parameters for the model under test, e.g. `temperature=0,max_tokens=2048`, where the benchmark lets the caller set them. |
 | `--task_args` | Benchmark settings declared in each task's `task_args`: turns, samples, subset, concurrency, … |
-| `--limit N` | Evaluate the first N items (conversations, personas, prompts). EQ-Bench has no subset option and always runs all 45 scenarios. |
+| `--limit N` | Evaluate the first N items (conversations, personas, prompts). EQ-Bench 3 has no subset option and always runs all 45 scenarios. |
 | `--output_path` | Default `results/`. |
 | `--include_path` | Additional directory of task YAML files. |
 | `--setup_only` | Fetch sources and build task environments without running. |
@@ -104,7 +105,7 @@ API keys are read from the environment variables named by `api_key_env`. The def
 }
 ```
 
-EQ-Bench 3 and Spiral-Bench resume from an existing task directory; delete it to start over.
+EQ-Bench 3, EQ-Bench 4 and Spiral-Bench resume from an existing task directory; delete it to start over.
 
 ### Submitting to the leaderboard
 
@@ -169,6 +170,7 @@ Where a task departs from the benchmark's own scripts, it is listed here.
 
   The repo reports a three-judge panel (`gpt-4.1`, `claude-haiku-4.5`, `gemini-2.5-flash`). This task uses one judge per run, `gpt-4.1` by default; run once per `--judge_args` to reproduce the panel.
 - **EQ-Bench 3.** Runs `eqbench3.py` unchanged: rubric scoring plus pairwise ELO against the bundled leaderboard. Sampling is fixed by the benchmark. `--task_args elo=false` skips the ELO pass, which takes the most judge calls.
+- **EQ-Bench 4.** Runs `eqbench4.py` unchanged with the README's leaderboard command: Gemini 3.1 Pro plays the persona, the pairwise panel is Gemini 3.1 Pro, GPT-5.5 and Claude Opus 4.6, Claude Opus 4.8 scores the behavioural traits, and the model's sampling is fixed by the benchmark. The rating is fitted against the leaderboard's 28 models, whose transcripts and comparisons ship in the repo. Each run gets its own copy of that pool, so a model's `elo` does not depend on what else was run before it; the optional model-profile summary is skipped. A model already in the pool is refused; `--task_args holdout=<model>` re-runs one from scratch with its own run and every comparison against it left out, which is how the task was validated. Gemini can go through Vertex AI's OpenAI-compatible endpoint instead of OpenRouter: `--user_args base_url=https://aiplatform.googleapis.com/v1/projects/<project>/locations/global/endpoints/openapi --task_args google_auth=true` adds a fresh Google access token (application default credentials) to every request. `--limit N` runs the first N scenarios. A run that leaves a conversation unfinished or the model unrated fails; rerunning the same command resumes it.
 - **CounselBench.** The repo's model classes accept only a fixed list of model names and read keys from `config.json`, and its data is not in the repository. The adapter:
   - reads the released Hugging Face data at pinned revisions;
   - implements the repo's `BaseModel` interface on an OpenAI-compatible client (same system prompt, temperature, token limit and JSON mode);
@@ -196,7 +198,7 @@ To add a benchmark, follow [Task configuration](#task-configuration). Please kee
 
 ## Acknowledgements
 
-`mheval` only orchestrates. The benchmarks, data, prompts and scoring belong to their authors: [MentalHealthBench](https://cdn.openai.com/ctf-cdn/MentalHealthBench_A_Comprehensive_Benchmark_of_AI_Capabilities_in_Realistic_Mental_Health_Conversations.pdf), [MindEval and MindEval 2](https://github.com/SWORDHealth/mind-eval), [HealthBench-Psych](https://github.com/mindbench-ai/healthbench-psych), [EQ-Bench 3](https://github.com/EQ-bench/eqbench3), [CounselBench](https://github.com/llm-eval-mental-health/CounselBench), [CBT-Bench](https://github.com/mianzhang/CBT-Bench), [VERA-MH](https://github.com/SpringCare/VERA-MH), [Spiral-Bench](https://github.com/sam-paech/spiral-bench), [SIM-VAIL](https://github.com/veithweilnhammer/sim-vail) (with [Petri](https://github.com/safety-research/petri)). Please cite the original papers when reporting results.
+`mheval` only orchestrates. The benchmarks, data, prompts and scoring belong to their authors: [MentalHealthBench](https://cdn.openai.com/ctf-cdn/MentalHealthBench_A_Comprehensive_Benchmark_of_AI_Capabilities_in_Realistic_Mental_Health_Conversations.pdf), [MindEval and MindEval 2](https://github.com/SWORDHealth/mind-eval), [HealthBench-Psych](https://github.com/mindbench-ai/healthbench-psych), [EQ-Bench 3](https://github.com/EQ-bench/eqbench3), [EQ-Bench 4](https://github.com/EQ-bench/eqbench4), [CounselBench](https://github.com/llm-eval-mental-health/CounselBench), [CBT-Bench](https://github.com/mianzhang/CBT-Bench), [VERA-MH](https://github.com/SpringCare/VERA-MH), [Spiral-Bench](https://github.com/sam-paech/spiral-bench), [SIM-VAIL](https://github.com/veithweilnhammer/sim-vail) (with [Petri](https://github.com/safety-research/petri)). Please cite the original papers when reporting results.
 
 ## Citation
 
@@ -207,7 +209,7 @@ If you use this harness, please cite it as below, together with the original pap
   author       = {Zhu, Ziyi and Shah, Raahil},
   title        = {Mental Health Evaluation Harness},
   year         = 2026,
-  version      = {v0.1.3},
+  version      = {v0.1.4},
   publisher    = {GitHub},
   url          = {https://github.com/slingshot-ai/mheval}
 }

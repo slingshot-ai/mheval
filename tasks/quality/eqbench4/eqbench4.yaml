@@ -1,0 +1,59 @@
+task: eqbench4
+tag: [quality]
+source:
+  - repo: https://github.com/EQ-bench/eqbench4
+    commit: 93dcb7f5d430433ad49d501e672a98bcff2c9678
+env:
+  python: "3.12"
+  install:
+    - uv sync --frozen
+    - uv pip install google-auth==2.40.3  # only for google_auth_proxy.py (google_auth=true)
+roles:
+  # The README's leaderboard command: Gemini 3.1 Pro plays every persona (and is one of the pairwise judges), Claude
+  # Opus 4.8 scores the behavioural traits. Both have to be these models: the rating is fitted against the bundled
+  # pool, whose transcripts were all made and judged with them.
+  user: {model: google/gemini-3.1-pro-preview, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY}
+  judge: {model: claude-opus-4-8, base_url: https://api.anthropic.com, api_key_env: ANTHROPIC_API_KEY}
+generation_kwargs: {}  # the benchmark fixes the model's sampling (temperature 0.7, its provider's reasoning default)
+task_args:
+  parallel: 128
+  # re-run a pool model from scratch, leaving its run and every comparison against it out of this run's pool
+  holdout: null
+  # true: reach Gemini through google_auth_proxy.py, for a Google endpoint (Vertex AI's OpenAI-compatible
+  # `.../endpoints/openapi`, set with --user_args base_url=...) that takes Google access tokens
+  google_auth: false
+env_vars: {}
+command: |
+  # Rerunning resumes: finished conversations and comparisons are kept.
+  gemini=()
+  {%- if args.google_auth %}
+  port={{ output_dir }}/google_auth_proxy.port
+  rm -f "$port"
+  python {{ task_dir }}/google_auth_proxy.py "$USER_BASE_URL" "$port" > {{ output_dir }}/google_auth_proxy.log 2>&1 &
+  proxy=$!
+  trap 'kill $proxy 2>/dev/null || true' EXIT
+  for _ in $(seq 1 60); do
+    [ -s "$port" ] && break
+    kill -0 $proxy 2>/dev/null || { cat {{ output_dir }}/google_auth_proxy.log; exit 1; }
+    sleep 1
+  done
+  gemini=(--gemini_base_url "http://127.0.0.1:$(cat "$port")/chat/completions")
+  {%- endif %}
+  python {{ task_dir }}/prepare.py {{ output_dir }} --holdout "{{ args.holdout or '' }}" "${gemini[@]}"
+  python -m mheval.reasoning_models eqbench4.py --config {{ output_dir }}/config.yaml \
+    --evaluated-model "$TARGET_MODEL" --persona-models "$USER_MODEL" --pointwise-judges "$JUDGE_MODEL" \
+    --pairwise-judges "$USER_MODEL,openai/gpt-5.5,claude-opus-4-6" --parallel {{ args.parallel }} \
+    --out {{ output_dir }}/results/mheval.json --run-id r1 --results-dir {{ output_dir }}/results \
+    --skip-summary {{ "--scenarios %d" % limit if limit else "" }}
+process_results: !function utils.process_results
+metric_list:
+  - {metric: elo, higher_is_better: true}  # the leaderboard's score: soft Bradley-Terry rating against the pool
+  - {metric: elo_ci_low, higher_is_better: true}
+  - {metric: elo_ci_high, higher_is_better: true}
+  - {metric: pairwise_win_fraction, higher_is_better: true}
+metadata:
+  version: 4.0
+  description: Emotional and social intelligence in 120 16-message role-play chats with a simulated user who reacts to how they are treated; rated by blind pairwise comparison against the EQ-Bench 4 leaderboard.
+  paper: null
+  homepage: https://eqbench.com/
+  implementation: original

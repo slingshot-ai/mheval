@@ -7,7 +7,7 @@ from mheval.config import Role, TaskConfig, load_tasks, parse_kv, select
 
 def test_all_tasks_load_with_the_same_shape():
     tasks = load_tasks()
-    assert len(tasks) == 11
+    assert len(tasks) == 12
     keys = {f.name for f in dataclasses.fields(TaskConfig)} - {"task_dir"}
     for cfg in tasks.values():
         assert set(vars(cfg)) - {"task_dir"} == keys
