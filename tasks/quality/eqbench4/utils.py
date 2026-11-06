@@ -2,6 +2,11 @@ import json
 import statistics
 from pathlib import Path
 
+# As on the leaderboard, a conversation that cannot finish (the model refuses a turn, a call keeps failing) is left
+# out of the rating rather than failing the run; its pool has models rated on 119. More than this many unfinished
+# is an outage, not a stray conversation.
+MAX_UNFINISHED = 3
+
 
 def process_results(output_dir: Path, ctx: dict) -> dict:
     """results/elo_results.json -> the model's rating against the pool (the leaderboard's score, with its bootstrap
@@ -11,7 +16,7 @@ def process_results(output_dir: Path, ctx: dict) -> dict:
     run = json.loads((output_dir / "results" / "mheval.json").read_text())["r1"]
     convos = [c for k, v in run.items() if not k.startswith("__") for c in v]
     done = [c for c in convos if c.get("completed")]
-    if len(done) != expected:
+    if expected - len(done) > MAX_UNFINISHED:
         raise RuntimeError(f"incomplete run: {len(done)} of {expected} conversations finished; rerun to resume")
     rating = json.loads((output_dir / "results" / "elo_results.json").read_text())["model_ratings"].get(target)
     if rating is None:
@@ -29,5 +34,6 @@ def process_results(output_dir: Path, ctx: dict) -> dict:
                     "elo_ci_high": rating["ci_high_norm"], "pairwise_win_fraction": statistics.mean(won)},
         "breakdown": {"trait": {k: {"score": round(statistics.mean(v), 3)} for k, v in sorted(traits.items())}},
         "n": len(done),
+        "n_unfinished": expected - len(done),
         "n_comparisons": len(won),
     }

@@ -55,11 +55,19 @@ def test_when_every_conversation_finished_and_was_rated_then_elo_and_win_fractio
     assert res["breakdown"]["trait"] == {"challenge_propensity": {"score": 4.0}}
 
 
-def test_when_a_conversation_is_unfinished_then_the_run_fails(tmp_path, ctx):
-    write_output(tmp_path, completed=1)
+def test_when_a_few_conversations_are_unfinished_then_the_rating_stands_on_the_rest(tmp_path):
+    write_output(tmp_path, completed=117)
+
+    res = task().process_results.resolve(task().task_dir)(tmp_path, {"target": {"model": TARGET}, "limit": None})
+
+    assert (res["n"], res["n_unfinished"]) == (117, 3)
+
+
+def test_when_more_conversations_are_unfinished_then_the_run_fails(tmp_path):
+    write_output(tmp_path, completed=116)
 
     with pytest.raises(RuntimeError, match="incomplete run"):
-        task().process_results.resolve(task().task_dir)(tmp_path, ctx)
+        task().process_results.resolve(task().task_dir)(tmp_path, {"target": {"model": TARGET}, "limit": None})
 
 
 @pytest.fixture
