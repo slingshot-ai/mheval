@@ -5,12 +5,12 @@
 [![CI](https://github.com/slingshot-ai/mheval/actions/workflows/ci.yml/badge.svg)](https://github.com/slingshot-ai/mheval/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Benchmarks](https://img.shields.io/badge/benchmarks-9-informational.svg)](#benchmarks)
+[![Benchmarks](https://img.shields.io/badge/benchmarks-10-informational.svg)](#benchmarks)
 [![Leaderboard](https://img.shields.io/badge/leaderboard-live-blueviolet.svg)](https://slingshot-ai.github.io/mheval-leaderboard/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
-The Mental Health Evaluation Harness (`mheval`) evaluates any language model on nine published therapy and mental-health benchmarks (quality and safety) with a single command. Each benchmark runs from **its original repository**: pinned to a commit, installed in its own isolated `uv` environment, and invoked through its own prompts, judges and scoring code. A thin adapter is added only where the original cannot run an arbitrary model.
+The Mental Health Evaluation Harness (`mheval`) evaluates any language model on ten published therapy and mental-health benchmarks (quality and safety) with a single command. Each benchmark runs from **its original repository**: pinned to a commit, installed in its own isolated `uv` environment, and invoked through its own prompts, judges and scoring code. A thin adapter is added only where the original cannot run an arbitrary model.
 
 - **Faithful.** Original code, pinned commits, sha256-verified data, and each paper's evaluation settings.
 - **Any endpoint.** The model under test, judges and user simulators are each any OpenAI-compatible API: OpenAI, OpenRouter, vLLM, SGLang, LiteLLM, and so on.
@@ -56,6 +56,7 @@ python -m mheval.report results/                     # Markdown summary of all r
 |---|---|---|---|---|---|
 | [MentalHealthBench](https://cdn.openai.com/ctf-cdn/MentalHealthBench_A_Comprehensive_Benchmark_of_AI_Capabilities_in_Realistic_Mental_Health_Conversations.pdf) (OpenAI) | `mentalhealthbench` | Next response in 1,215 synthetic conversations across acuity levels and user types | `gpt-5.6-sol`, high reasoning | `task_clipped_score` (0–1) | 10 behavior axes, acuity, user profile, language, prior context |
 | [MindEval](https://github.com/SWORDHealth/mind-eval) (Sword Health) | `mindeval` | Full therapy sessions (20 turns) with a simulated patient | judge `claude-sonnet-4.5`, patient `claude-haiku-4.5` | `average_score` (1–6) | 5 clinical criteria |
+| [MindEval 2](https://arxiv.org/abs/2610.22314) (Sword Health) | `mindeval2` | Three sessions per patient (up to 30 replies each) with a simulated patient who remembers the earlier ones; every reply judged for clinical issues | judge `gpt-6.1-sol`, high reasoning; patient `deepseek-v4.1-flash` | `mhqr` (0–10, lower is better) | reply severity, 14 issues, session |
 | [HealthBench-Psych](https://github.com/mindbench-ai/healthbench-psych) | `healthbench_psych` | Clinician-adjudicated mental-health subset of HealthBench | `gpt-4.1-2025-04-14` | `clipped_mean_score` (0–1) | theme, rubric axis |
 | [EQ-Bench 3](https://github.com/EQ-bench/eqbench3) | `eqbench3` | Emotional intelligence in multi-turn role-play and transcript analysis | `claude-opus-4.6` | `rubric_score` (0–100), `elo_normalized` | scenario type, 18 rubric criteria |
 | [CounselBench](https://github.com/llm-eval-mental-health/CounselBench) | `counselbench_eval` | Single-turn counseling answers (EVAL) | `gpt-4.1` | `overall` (1–5) | 6 metrics, topic |
@@ -159,6 +160,7 @@ Where a task departs from the benchmark's own scripts, it is listed here.
 
   The paper does not specify how the conversation is shown to the grader; it is rendered as `role: content` blocks. Axis scores average over the conversations that contain that axis.
 - **MindEval.** Runs the repo's interaction and judgment scripts with `run_benchmark.sh` settings: 10 exchanges, which is 20 turns in the paper's counting, over 50 patient profiles. It uses the published `v0_1` clinician prompt, because the script's `custom` template is an unfilled placeholder. The patient and judge are reached through OpenRouter rather than Vertex AI. The paper runs reasoning models at high reasoning effort, so the reported results for gpt-5, claude-sonnet-4.5 and gemini-2.5-pro use `--gen_kwargs reasoning_effort=high`. The headline is the paper's `average_score`.
+- **MindEval 2.** Runs the repo's interaction and judgment scripts with the paper's settings (§5.1), which are the scripts' defaults: 50 patients, 3 sessions of at most 30 counselor replies, seed 0, the counselor at temperature 1.0 with its provider's defaults, and the MQM judge (`gpt-6.1-sol`, high reasoning). The patient is the paper's DeepSeek-V4.1-Flash with thinking on, reached through OpenRouter rather than vLLM, limited to providers that honour a named `tool_choice`. OpenAI reasoning models take `--task_args counselor_api=responses`, so their earlier reasoning is handed back to them as the README asks. The headline `mhqr` is the paper's MHQR (Table 6): each reply weighted by severity (none 0, minor 1, major 5, critical 10), averaged within a session, then over all 150 sessions. MindEval 2 scores are not comparable with MindEval 1, which stays as the `mindeval` task. A partial run (some patient or verdict still pending after retries) fails; rerunning the same command resumes it.
 - **HealthBench-Psych.** The repo's models are a fixed registry, so the adapter drives its own components:
   - `OpenAICompatSampler` for model access, reusing the registry's per-model settings where the model is listed.
   - The frozen subset.
@@ -194,7 +196,7 @@ To add a benchmark, follow [Task configuration](#task-configuration). Please kee
 
 ## Acknowledgements
 
-`mheval` only orchestrates. The benchmarks, data, prompts and scoring belong to their authors: [MentalHealthBench](https://cdn.openai.com/ctf-cdn/MentalHealthBench_A_Comprehensive_Benchmark_of_AI_Capabilities_in_Realistic_Mental_Health_Conversations.pdf), [MindEval](https://github.com/SWORDHealth/mind-eval), [HealthBench-Psych](https://github.com/mindbench-ai/healthbench-psych), [EQ-Bench 3](https://github.com/EQ-bench/eqbench3), [CounselBench](https://github.com/llm-eval-mental-health/CounselBench), [CBT-Bench](https://github.com/mianzhang/CBT-Bench), [VERA-MH](https://github.com/SpringCare/VERA-MH), [Spiral-Bench](https://github.com/sam-paech/spiral-bench), [SIM-VAIL](https://github.com/veithweilnhammer/sim-vail) (with [Petri](https://github.com/safety-research/petri)). Please cite the original papers when reporting results.
+`mheval` only orchestrates. The benchmarks, data, prompts and scoring belong to their authors: [MentalHealthBench](https://cdn.openai.com/ctf-cdn/MentalHealthBench_A_Comprehensive_Benchmark_of_AI_Capabilities_in_Realistic_Mental_Health_Conversations.pdf), [MindEval and MindEval 2](https://github.com/SWORDHealth/mind-eval), [HealthBench-Psych](https://github.com/mindbench-ai/healthbench-psych), [EQ-Bench 3](https://github.com/EQ-bench/eqbench3), [CounselBench](https://github.com/llm-eval-mental-health/CounselBench), [CBT-Bench](https://github.com/mianzhang/CBT-Bench), [VERA-MH](https://github.com/SpringCare/VERA-MH), [Spiral-Bench](https://github.com/sam-paech/spiral-bench), [SIM-VAIL](https://github.com/veithweilnhammer/sim-vail) (with [Petri](https://github.com/safety-research/petri)). Please cite the original papers when reporting results.
 
 ## Citation
 
@@ -205,7 +207,7 @@ If you use this harness, please cite it as below, together with the original pap
   author       = {Zhu, Ziyi and Shah, Raahil},
   title        = {Mental Health Evaluation Harness},
   year         = 2026,
-  version      = {v0.1.2},
+  version      = {v0.1.3},
   publisher    = {GitHub},
   url          = {https://github.com/slingshot-ai/mheval}
 }
