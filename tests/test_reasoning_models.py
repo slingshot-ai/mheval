@@ -18,6 +18,12 @@ class FakeReasoningModel(BaseHTTPRequestHandler):
         if body["model"] == "strict" and ("max_tokens" in body or "temperature" in body):
             param = "max_tokens" if "max_tokens" in body else "temperature"
             return self._send(400, {"error": {"message": f"Unsupported parameter: '{param}'", "param": param}})
+        if body["model"] == "small" and body.get("max_tokens", 0) > 17000:  # a 20,000-token window, 3,000 prompt
+            message = (
+                "This model's maximum context length is 20000 tokens. However, you requested "
+                f"{body['max_tokens']} output tokens and your prompt contains at least 3000 input tokens."
+            )
+            return self._send(400, {"error": {"message": message}})
         if body.get("max_tokens", body.get("max_completion_tokens", 10**6)) < 5000:
             choice = {"message": {"content": None}, "finish_reason": "length"}
         else:
@@ -61,6 +67,13 @@ def test_other_models_pass_through(url):
     reply = requests.post(url, json={"model": "judge", "messages": [], "max_tokens": 3072}).json()
     assert reply["choices"][0]["message"]["content"] is None
     assert len(FakeReasoningModel.requests) == 1
+
+
+@pytest.mark.parametrize("url", ["small"], indirect=True)
+def test_reasoning_retry_that_overflows_the_window_is_capped_at_what_it_leaves(url):
+    reply = requests.post(url, json={"model": "small", "messages": [], "max_tokens": 3072}).json()
+    assert reply["choices"][0]["message"]["content"] == "answer"
+    assert [r["max_tokens"] for r in FakeReasoningModel.requests] == [3072, 3072 + 16000, 17000]
 
 
 @pytest.mark.parametrize("url", ["strict"], indirect=True)
