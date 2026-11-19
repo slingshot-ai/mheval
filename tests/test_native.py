@@ -62,6 +62,37 @@ def test_chat_adapts_to_reasoning_model(server):
     assert len(FakeReasoningModel.requests) == n + 1
 
 
+class SmallWindowReasoningModel(FakeReasoningModel):
+    """The reasoning model served with a 20,000-token window and a 3,000-token prompt, refusing longer requests in
+    vLLM's words."""
+
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        type(self).requests.append(body)
+        cap = body.get("max_completion_tokens", 0)
+        if 3000 + cap > 20000:
+            return self._send(400, {"error": {"message": (
+                "This model's maximum context length is 20000 tokens. However, you requested "
+                f"{cap} output tokens and your prompt contains at least 3000 input tokens.")}})
+        if cap < 5000:
+            return self._send(200, {"choices": [{"message": {"content": ""}, "finish_reason": "length"}],
+                                    "usage": {"completion_tokens_details": {"reasoning_tokens": cap}}})
+        return self._send(200, {"choices": [{"message": {"content": "answer"}, "finish_reason": "stop"}]})
+
+
+def test_when_the_extra_room_overflows_the_window_then_the_answer_is_capped_to_fit(monkeypatch):
+    httpd = HTTPServer(("127.0.0.1", 0), SmallWindowReasoningModel)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    SmallWindowReasoningModel.requests = []
+    monkeypatch.setenv("TARGET_MODEL", "fake")
+    monkeypatch.setenv("TARGET_BASE_URL", f"http://127.0.0.1:{httpd.server_port}/v1")
+    try:
+        assert Chat("target")("hi", max_completion_tokens=3072) == "answer"
+    finally:
+        httpd.shutdown()
+    assert SmallWindowReasoningModel.requests[-1]["max_completion_tokens"] == 17000
+
+
 def test_mean():
     assert mean([1, 2, None, "x"]) == 1.5
     assert mean([True, False]) == 0.5

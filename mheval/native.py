@@ -8,6 +8,7 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import re
 import sys
 import time
 import types
@@ -23,7 +24,8 @@ class Chat:
     Retries transient errors with backoff and empty non-refusal answers up to twice, and adapts once per
     client to reasoning models: a rejected
     `temperature`/`top_p` is dropped, `max_tokens` becomes `max_completion_tokens`, and an answer cut off at
-    the token cap after hidden reasoning (which counts against the same cap) is retried with extra room.
+    the token cap after hidden reasoning (which counts against the same cap) is retried with extra room, cut
+    to what the model's context window leaves when the endpoint refuses the extra room as too long.
     """
 
     REASONING_HEADROOM = 16000
@@ -39,7 +41,7 @@ class Chat:
         self.rejected: set[str] = set()   # params the endpoint refused; learned once, shared across threads
         self.headroom = 0                 # extra tokens added to any cap after an empty, truncated answer
 
-    def _payload(self, messages: list[dict], kw: dict) -> dict:
+    def _payload(self, messages: list[dict], kw: dict, fit: int | None = None) -> dict:
         payload = {"model": self.model, "messages": messages, **self.defaults, **kw}
         for param in self.rejected:
             value = payload.pop(param, None)
@@ -47,7 +49,8 @@ class Chat:
                 payload["max_completion_tokens"] = value
         for cap in ("max_tokens", "max_completion_tokens"):
             if cap in payload:
-                payload[cap] += self.headroom
+                asked = payload[cap]
+                payload[cap] = asked + self.headroom if fit is None else max(asked, min(asked + self.headroom, fit))
         return payload
 
     def _log(self, msg: str) -> None:
@@ -57,9 +60,10 @@ class Chat:
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
         attempt = empty_retries = 0
+        fit = None  # the most output tokens the context window leaves this request, once the endpoint says so
         while True:
             headroom = self.headroom
-            payload = self._payload(messages, kw)
+            payload = self._payload(messages, kw, fit)
             req = urllib.request.Request(self.url, json.dumps(payload).encode(),
                                          {"Content-Type": "application/json", "Authorization": f"Bearer {self.key}"})
             try:
@@ -85,6 +89,11 @@ class Chat:
                 return content
             except urllib.error.HTTPError as e:
                 body = e.read()
+                room = _context_room(body) if e.code == 400 and headroom and fit is None else None
+                if room is not None:
+                    fit = room
+                    self._log(f"the extra room overflows the context window; capping this answer at {room} tokens")
+                    continue
                 param = _rejected_param(body) if e.code == 400 else None
                 if param in ("temperature", "top_p", "max_tokens") and param in payload:
                     if param not in self.rejected:
@@ -118,6 +127,18 @@ def _read(req: urllib.request.Request, deadline: float) -> bytes:
             if time.monotonic() > end:
                 raise TimeoutError(f"no complete response within {deadline}s")
         return body
+
+
+def _context_room(error_body: bytes) -> int | None:
+    """The output tokens a context-length refusal leaves the request (window minus prompt), from vLLM's wording;
+    None for any other refusal."""
+    text = error_body.decode("utf-8", "replace")
+    window = re.search(r"maximum context length is (\d+)", text)
+    prompt = re.search(r"(\d+) input tokens|(\d+) in the messages", text)
+    if not window or not prompt:
+        return None
+    room = int(window.group(1)) - int(prompt.group(1) or prompt.group(2))
+    return room if room > 0 else None
 
 
 def _rejected_param(error_body: bytes) -> str | None:

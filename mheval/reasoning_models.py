@@ -5,7 +5,8 @@
 Some benchmarks call the API with their own client, written for the models of their day. For the model under test,
 this applies the adaptations `native.Chat` makes in mheval's own adapters: a `temperature`/`top_p` the endpoint
 rejects is dropped and a rejected `max_tokens` is sent as `max_completion_tokens` (both learned once), and a reply
-cut off at the token cap by hidden reasoning, with no answer, is retried once with extra room. Every other request
+cut off at the token cap by hidden reasoning, with no answer, is retried once with extra room (cut to what the
+context window leaves when the endpoint refuses the extra room as too long). Every other request
 (judges, simulated users) passes through unchanged. Stdlib only, plus the `requests` the benchmark itself uses.
 """
 
@@ -15,7 +16,7 @@ import os
 import runpy
 import sys
 
-from mheval.native import Chat, _rejected_param
+from mheval.native import Chat, _context_room, _rejected_param
 
 
 def install() -> None:
@@ -68,7 +69,12 @@ def install() -> None:
         if cap and choice.get("finish_reason") == "length" and not (choice.get("message") or {}).get("content"):
             log(f"answer cut off at the token cap by hidden reasoning; adding {Chat.REASONING_HEADROOM} tokens")
             kwargs["json"] = {**sent, cap: sent[cap] + Chat.REASONING_HEADROOM}
-            return send(self, method, url, *args, **kwargs)
+            response = send(self, method, url, *args, **kwargs)
+            room = _context_room(response.content) if response.status_code == 400 else None
+            if room is not None:
+                log(f"the extra room overflows the context window; capping this answer at {room} tokens")
+                kwargs["json"] = {**sent, cap: max(sent[cap], min(sent[cap] + Chat.REASONING_HEADROOM, room))}
+                response = send(self, method, url, *args, **kwargs)
         return response
 
     requests.Session.request = request
