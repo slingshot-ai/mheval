@@ -66,7 +66,7 @@ def prepare(cfg: TaskConfig) -> Path:
     for src in cfg.source:
         (_fetch_repo if "repo" in src else _fetch_url)(src, ws / source_name(src))
     _run(f"uv venv -q --python {cfg.env['python']} {ws / '.venv'}", ws)
-    for cmd in cfg.env.get("install", []):  # MHEVAL_TASK_DIR: the task's folder, e.g. for its pinned constraints
-        _run(cmd, ws / source_name(cfg.source[0]), venv_env(ws) | {"MHEVAL_TASK_DIR": str(cfg.task_dir)})
+    for cmd in cfg.env.get("install", []):
+        _run(cmd, ws / source_name(cfg.source[0]), venv_env(ws))
     (ws / ".ready").write_text(spec)
     return ws
