@@ -1,6 +1,7 @@
 """Set up one EQ-Bench 4 run: its own copy of the reference pool, and the config.yaml the benchmark reads.
 
     python prepare.py <output_dir> [--holdout MODEL] [--gemini_base_url URL]
+                      [--openrouter_url URL] [--anthropic_url URL]
 
 The rating is fitted against the repo's bundled pool (results/*.json: every reference model's transcripts and the
 pairwise comparisons made when it was added). The benchmark writes the new model's comparisons into its own run
@@ -64,7 +65,8 @@ def link_pool(out: Path, target: str, holdout: str | None) -> None:
         (pool / ELO).write_text(json.dumps(elo, indent=2))
 
 
-def write_config(out: Path, gemini_base_url: str) -> None:
+def write_config(out: Path, gemini_base_url: str, openrouter_url: str | None = None,
+                 anthropic_url: str | None = None) -> None:
     def creds(prefix: str) -> dict:
         base = os.environ[f"{prefix}_BASE_URL"]
         return {"api_key": f"${{{prefix}_API_KEY}}",  # expanded by the benchmark, so no key is written to disk
@@ -73,7 +75,9 @@ def write_config(out: Path, gemini_base_url: str) -> None:
     target, judge, user = (os.environ[f"{p}_MODEL"] for p in ("TARGET", "JUDGE", "USER"))
     if user != GEMINI:
         raise SystemExit(f"the persona must be {GEMINI}, which played every pool model's users; got {user}")
-    model_creds = {**PAIRWISE, judge: creds("JUDGE"), user: {**creds("USER"), "base_url": gemini_base_url},
+    pairwise = {model: {**c, "base_url": (openrouter_url if "openrouter" in c["base_url"] else anthropic_url)
+                                  or c["base_url"]} for model, c in PAIRWISE.items()}
+    model_creds = {**pairwise, judge: creds("JUDGE"), user: {**creds("USER"), "base_url": gemini_base_url},
                    target: creds("TARGET")}
     example = yaml.safe_load(Path("config.yaml.example").read_text())
     config = {**example, "model_creds": model_creds, "enable_model_summary": False}
@@ -85,9 +89,12 @@ def main() -> None:
     parser.add_argument("output_dir", type=Path)
     parser.add_argument("--holdout", default=None)
     parser.add_argument("--gemini_base_url", default=None, help="Gemini's chat/completions URL (default: the user's)")
+    parser.add_argument("--openrouter_url", default=None, help="the OpenRouter pairwise judge's chat/completions URL")
+    parser.add_argument("--anthropic_url", default=None, help="the Anthropic pairwise judge's base URL")
     args = parser.parse_args()
     link_pool(args.output_dir, os.environ["TARGET_MODEL"], args.holdout or None)
-    write_config(args.output_dir, args.gemini_base_url or f"{os.environ['USER_BASE_URL']}/chat/completions")
+    write_config(args.output_dir, args.gemini_base_url or f"{os.environ['USER_BASE_URL']}/chat/completions",
+                 args.openrouter_url or None, args.anthropic_url or None)
 
 
 if __name__ == "__main__":
