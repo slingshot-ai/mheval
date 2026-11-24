@@ -30,12 +30,19 @@ def comparison(a, b, fraction_for_a):
             "aggregated": {"fraction_for_model_a": fraction_for_a}}
 
 
-def write_output(out, completed, rated=True):
+def unjudged(a, b):
+    """A comparison whose judge failed every try, as EQ-Bench 4 saves it."""
+    return {"scenario_id": "s0", "iteration_index": 0, "pair": {"model_a": a, "model_b": b},
+            "aggregated": {"error": "All judges failed"}}
+
+
+def write_output(out, completed, rated=True, failed=0, judged=1):
     results = out / "results"
     results.mkdir(parents=True)
     traits = {"challenge_propensity": 4.0, "num_judges": 1}
     convos = [{"completed": True, "performance_judge_results": traits}] * completed
-    pairwise = [comparison(TARGET, "pool/a", 0.75), comparison("pool/b", TARGET, 0.75)]
+    pairwise = [comparison(TARGET, "pool/a", 0.75), comparison("pool/b", TARGET, 0.75)] * judged
+    pairwise += [unjudged(TARGET, "pool/a")] * failed
     (results / "mheval.json").write_text(json.dumps(run_file(TARGET, convos, pairwise)))
     ratings = {TARGET: {"elo_norm": 1100.0, "ci_low_norm": 1090.0, "ci_high_norm": 1110.0}} if rated else {}
     (results / "elo_results.json").write_text(json.dumps({"model_ratings": ratings}))
@@ -53,6 +60,23 @@ def test_when_every_conversation_finished_and_was_rated_then_elo_and_win_fractio
 
     assert res["metrics"] == {"elo": 1100.0, "elo_ci_low": 1090.0, "elo_ci_high": 1110.0, "pairwise_win_fraction": 0.5}
     assert res["breakdown"]["trait"] == {"challenge_propensity": {"score": 4.0}}
+    assert (res["n_comparisons"], res["n_comparisons_unjudged"]) == (2, 0)
+
+
+def test_when_a_few_comparisons_have_no_verdict_then_they_are_left_out_and_counted(tmp_path, ctx):
+    write_output(tmp_path, completed=2, failed=1, judged=5)
+
+    res = task().process_results.resolve(task().task_dir)(tmp_path, ctx)
+
+    assert res["metrics"]["pairwise_win_fraction"] == 0.5
+    assert (res["n_comparisons"], res["n_comparisons_unjudged"]) == (10, 1)
+
+
+def test_when_many_comparisons_have_no_verdict_then_the_run_fails_as_a_judge_outage(tmp_path, ctx):
+    write_output(tmp_path, completed=2, failed=2, judged=5)
+
+    with pytest.raises(RuntimeError, match="judge outage: 2 of 12 .*All judges failed"):
+        task().process_results.resolve(task().task_dir)(tmp_path, ctx)
 
 
 def test_when_a_few_conversations_are_unfinished_then_the_rating_stands_on_the_rest(tmp_path):
