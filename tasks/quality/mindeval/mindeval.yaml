@@ -6,7 +6,7 @@ source:
 env:
   python: "3.12"
   install:
-    - uv pip install -e .
+    - uv pip install -e . -c "$MHEVAL_TASK_DIR/constraints.txt"
 roles:  # run_benchmark.sh: member claude-haiku-4-5, judge claude-sonnet-4-5, both high reasoning, 16k tokens
   user: {model: anthropic/claude-haiku-4.5, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY,
          max_completion_tokens: 16000, reasoning_effort: high}

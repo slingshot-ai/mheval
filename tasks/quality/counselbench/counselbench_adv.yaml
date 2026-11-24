@@ -12,7 +12,7 @@ source:
 env:
   python: "3.12"
   install:
-    - uv pip install pandas numpy tqdm
+    - uv pip install pandas numpy tqdm -c "$MHEVAL_TASK_DIR/constraints.txt"
 roles:
   judge: {model: gpt-4.1, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY}  # repo scripts
 generation_kwargs: {}  # set by the repo's model contract (temperature, max 1024 tokens)

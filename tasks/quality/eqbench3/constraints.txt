@@ -1,0 +1,25 @@
+# Every package this benchmark's environment installs, at the versions in the eval image of 24 Nov 2026
+# (ml-evals:1ce4c72c8), so a rebuild cannot change them.
+certifi==2026.11.20
+charset-normalizer==3.5.3
+click==8.5.1
+cloudpickle==3.1.3
+defusedxml==0.7.1
+ftfy==6.3.1
+idna==3.20
+joblib==1.6.0
+langcodes==3.5.1
+locate==1.1.1
+msgpack==1.2.4
+nltk==3.10.4
+numpy==2.5.5
+python-dotenv==1.2.4
+regex==2026.11.23
+requests==2.34.2
+scipy==1.18.1
+six==1.17.0
+tqdm==4.70.1
+trueskill==0.4.5
+urllib3==2.8.0
+wcwidth==0.9.5
+wordfreq==3.1.1

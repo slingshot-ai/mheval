@@ -125,7 +125,8 @@ source:                 # pinned inputs; the first entry is the working director
   # - {url: https://…/data.zip, sha256: …, extract: true}
 env:                    # isolated environment, built once per distinct (source, env)
   python: "3.12"
-  install: [uv pip install requests python-dotenv tqdm numpy pandas]
+  install: [uv pip install requests python-dotenv tqdm numpy pandas -c "$MHEVAL_TASK_DIR/constraints.txt"]
+                        # every installed package pinned, in the task's folder ($MHEVAL_TASK_DIR), or a lockfile
 roles:                  # default judge / user simulator; the model under test comes from --model_args
   judge: {model: gpt-5-2025-08-07, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY}
 generation_kwargs: {}   # sampling defaults for the model under test

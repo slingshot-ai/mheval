@@ -7,7 +7,7 @@ source:
 env:
   python: "3.12"
   install:
-    - uv pip install requests python-dotenv tqdm numpy pandas  # imports of main.py (the repo has no requirements file)
+    - uv pip install requests python-dotenv tqdm numpy pandas -c "$MHEVAL_TASK_DIR/constraints.txt"  # imports of main.py (the repo has no requirements file)
 roles:
   # README default is Kimi-K2 (moonshotai/kimi-k2); kimi-k2.5 is its successor and the closest model still served broadly
   user: {model: moonshotai/kimi-k2.5, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY}
