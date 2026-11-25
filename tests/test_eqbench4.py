@@ -2,6 +2,7 @@ import importlib.util
 import json
 
 import pytest
+import yaml
 
 from mheval.config import load_tasks
 
@@ -125,3 +126,37 @@ def test_when_a_pool_model_is_held_out_then_its_run_and_comparisons_are_left_out
     assert not (pool / "results" / "r1.json").exists()
     assert json.loads((pool / "results" / "r2.json").read_text())["r1"]["__pairwise__"] == []
     assert list(json.loads((pool / "results" / "elo_results.json").read_text())["model_ratings"]) == ["pool/b"]
+
+
+@pytest.fixture
+def config_env(tmp_path, monkeypatch):
+    """The benchmark's checkout (its config.yaml.example) as the working directory, and the roles' env."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "config.yaml.example").write_text("model_creds: {}\n")
+    monkeypatch.chdir(repo)
+    env = {"TARGET_MODEL": TARGET, "JUDGE_MODEL": "claude-opus-4-8", "USER_MODEL": "google/gemini-3.1-pro-preview",
+           "TARGET_BASE_URL": "http://t/v1", "JUDGE_BASE_URL": "https://api.anthropic.com", "USER_BASE_URL": "http://u/v1"}
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+    return tmp_path / "out"
+
+
+def pairwise_urls(out):
+    creds = yaml.safe_load((out / "config.yaml").read_text())["model_creds"]
+    return creds["openai/gpt-5.5"]["base_url"], creds["claude-opus-4-6"]["base_url"]
+
+
+def test_when_the_pairwise_judges_are_given_urls_then_they_are_reached_there(config_env):
+    config_env.mkdir()
+    prepare_module().write_config(config_env, "http://u/v1/chat/completions", "http://proxy/or/chat/completions",
+                                  "http://proxy/anthropic.com")
+
+    assert pairwise_urls(config_env) == ("http://proxy/or/chat/completions", "http://proxy/anthropic.com")
+
+
+def test_when_the_pairwise_judges_are_given_no_urls_then_they_are_reached_at_their_public_endpoints(config_env):
+    config_env.mkdir()
+    prepare_module().write_config(config_env, "http://u/v1/chat/completions")
+
+    assert pairwise_urls(config_env) == ("https://openrouter.ai/api/v1/chat/completions", "https://api.anthropic.com")

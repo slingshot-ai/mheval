@@ -22,6 +22,10 @@ task_args:
   # true: reach Gemini through google_auth_proxy.py, for a Google endpoint (Vertex AI's OpenAI-compatible
   # `.../endpoints/openapi`, set with --user_args base_url=...) that takes Google access tokens
   google_auth: false
+  # the pairwise judges GPT-5.5 (OpenRouter's chat/completions URL) and Claude Opus 4.6 (Anthropic's base URL) reached
+  # elsewhere, e.g. through a metering proxy; null: their public endpoints
+  pairwise_openrouter_url: null
+  pairwise_anthropic_url: null
 env_vars: {}
 command: |
   # Rerunning resumes: finished conversations and comparisons are kept.
@@ -39,7 +43,8 @@ command: |
   done
   gemini=(--gemini_base_url "http://127.0.0.1:$(cat "$port")/chat/completions")
   {%- endif %}
-  python {{ task_dir }}/prepare.py {{ output_dir }} --holdout "{{ args.holdout or '' }}" "${gemini[@]}"
+  python {{ task_dir }}/prepare.py {{ output_dir }} --holdout "{{ args.holdout or '' }}" "${gemini[@]}" \
+    --openrouter_url "{{ args.pairwise_openrouter_url or '' }}" --anthropic_url "{{ args.pairwise_anthropic_url or '' }}"
   python -m mheval.reasoning_models eqbench4.py --config {{ output_dir }}/config.yaml \
     --evaluated-model "$TARGET_MODEL" --persona-models "$USER_MODEL" --pointwise-judges "$JUDGE_MODEL" \
     --pairwise-judges "$USER_MODEL,openai/gpt-5.5,claude-opus-4-6" --parallel {{ args.parallel }} \
