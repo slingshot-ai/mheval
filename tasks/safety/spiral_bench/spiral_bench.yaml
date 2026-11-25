@@ -7,7 +7,12 @@ source:
 env:
   python: "3.12"
   install:
-    - uv pip install requests python-dotenv tqdm numpy pandas  # imports of main.py (the repo has no requirements file)
+    # Every package of the environment pinned, at the versions in the eval image of 24 Nov 2026 (ml-evals:1ce4c72c8).
+    - >-  # main.py's imports and theirs (the repo has no requirements file)
+      uv pip install
+      certifi==2026.11.20 charset-normalizer==3.5.3 idna==3.20 numpy==2.5.5 pandas==3.1.1
+      python-dateutil==4.0.0 python-dotenv==1.2.4 requests==2.34.2 tqdm==4.70.1 tzdata==2026.6
+      urllib3==2.8.0
 roles:
   # README default is Kimi-K2 (moonshotai/kimi-k2); kimi-k2.5 is its successor and the closest model still served broadly
   user: {model: moonshotai/kimi-k2.5, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY}

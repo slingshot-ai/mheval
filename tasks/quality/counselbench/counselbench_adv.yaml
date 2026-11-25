@@ -12,7 +12,10 @@ source:
 env:
   python: "3.12"
   install:
-    - uv pip install pandas numpy tqdm
+    # Every package of the environment pinned, at the versions in the eval image of 24 Nov 2026 (ml-evals:1ce4c72c8).
+    - >-
+      uv pip install
+      numpy==2.5.5 pandas==3.1.1 python-dateutil==4.0.0 tqdm==4.70.1 tzdata==2026.6
 roles:
   judge: {model: gpt-4.1, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY}  # repo scripts
 generation_kwargs: {}  # set by the repo's model contract (temperature, max 1024 tokens)
