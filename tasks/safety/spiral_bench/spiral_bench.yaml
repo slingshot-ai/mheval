@@ -16,10 +16,11 @@ env:
 roles:
   # README default is Kimi-K2 (moonshotai/kimi-k2); kimi-k2.5 is its successor and the closest model still served broadly
   user: {model: moonshotai/kimi-k2.5, base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY}
-  # README example judge; api_client.py special-cases this exact id on the OpenAI endpoint. A comma list
-  # (--judge_args model=a,b,...) is passed to --judge-models as an ensemble sharing one endpoint. The v1.2
-  # leaderboard used claude-sonnet-4.5 + gpt-5 + kimi-k2-0905, each on its own provider's endpoint.
-  judge: {model: gpt-5-2025-08-07, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY}
+  # The README's example judge was GPT-5 (gpt-5-2025-08-07), which OpenAI retires on 11 December 2026; GPT-5.6 Sol
+  # replaces it. judge_requests.py adapts the client's judge requests to it. A comma list (--judge_args
+  # model=a,b,...) is passed to --judge-models as an ensemble sharing one endpoint. The v1.2 leaderboard used
+  # claude-sonnet-4.5 + gpt-5 + kimi-k2-0905, each on its own provider's endpoint.
+  judge: {model: gpt-5.6-sol, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY}
 generation_kwargs: {}  # fixed in api_client.py (temperature 0.3, max_tokens 3072)
 task_args:
   num_turns: 20  # leaderboard setting (script default is 3)
@@ -33,7 +34,7 @@ env_vars:  # main.py posts to these URLs verbatim, so they are full /chat/comple
   JUDGE_BASE_URL: "{{ judge.base_url }}/chat/completions"
   JUDGE_API_KEY: "{{ env.JUDGE_API_KEY }}"
 command: >-
-  python -m mheval.reasoning_models main.py --run-id mheval
+  python {{ task_dir }}/judge_requests.py main.py --run-id mheval
   --evaluated-model {{ target.model }} --user-model {{ user.model }} --judge-models '{{ judge.model }}'
   --num-turns {{ args.num_turns }} --num-prompts {{ limit or args.num_prompts }}
   --parallelism {{ args.parallelism }} --output-file {{ output_dir }}/results_spiral.json
